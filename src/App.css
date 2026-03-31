@@ -1,0 +1,311 @@
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  background: var(--primary);
+  color: #08111f;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+button:hover {
+  filter: brightness(1.06);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+button.secondary.active {
+  outline: 2px solid var(--primary);
+}
+
+button.danger {
+  background: var(--danger);
+  color: white;
+}
+
+button.ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  background: #111521;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.app-shell {
+  width: min(1400px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 24px 0 48px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: end;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.topbar h1 {
+  margin: 0 0 0.3rem;
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tabs button {
+  background: var(--panel);
+  color: var(--text);
+}
+
+.tabs button.active {
+  background: var(--primary);
+  color: #08111f;
+}
+
+.main-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent), var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.form label {
+  display: grid;
+  gap: 8px;
+  color: var(--text-soft);
+}
+
+.section-header,
+.switch-row,
+.admin-actions,
+.toolbar,
+.mini-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.section-header,
+.mini-row {
+  justify-content: space-between;
+}
+
+.switch-row {
+  flex-wrap: wrap;
+}
+
+.badge {
+  background: #111521;
+  border: 1px solid var(--border);
+  color: var(--text-soft);
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+.queue-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.queue-item {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+}
+
+.queue-pos {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #111521;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.queue-main p {
+  margin: 0.35rem 0 0;
+  color: var(--text-soft);
+}
+
+.queue-meta {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.status {
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  text-transform: capitalize;
+  border: 1px solid var(--border);
+}
+
+.status.aguardando {
+  color: var(--warning);
+}
+
+.status.em_atendimento {
+  color: var(--success);
+}
+
+.timer {
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.timer-card {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  min-height: 240px;
+}
+
+.big-timer {
+  font-size: clamp(2.8rem, 7vw, 5rem);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--primary);
+}
+
+.highlight-box,
+.session-box {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.mini-list {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.muted {
+  color: var(--text-soft);
+}
+
+.small {
+  font-size: 0.9rem;
+}
+
+.success {
+  color: var(--success);
+  margin: 0;
+}
+
+.error {
+  color: var(--danger);
+  margin: 0;
+}
+
+@media (max-width: 980px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .queue-item {
+    grid-template-columns: 48px 1fr;
+  }
+
+  .queue-meta {
+    grid-column: 1 / -1;
+    justify-items: start;
+  }
+}
+
+.student-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 980px) {
+  .student-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.inline-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 15, 0.72);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.modal {
+  width: min(560px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+}
