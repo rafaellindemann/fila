@@ -12,7 +12,11 @@ import {
   registrarResolvidoSozinho,
 } from '../services/interacoes'
 
-export default function StudentForm({ onRefresh }) {
+export default function StudentForm({
+  onRefresh,
+  cadastroAlunoAberto,
+  setCadastroAlunoAberto,
+}) {
   const [alunos, setAlunos] = useState([])
   const [turmas, setTurmas] = useState([])
   const [sessoes, setSessoes] = useState([])
@@ -22,7 +26,6 @@ export default function StudentForm({ onRefresh }) {
   const [descricao, setDescricao] = useState('')
   const [colegaId, setColegaId] = useState('')
 
-  const [modalCadastroAberto, setModalCadastroAberto] = useState(false)
   const [nome, setNome] = useState('')
   const [matricula, setMatricula] = useState('')
   const [turmaId, setTurmaId] = useState('')
@@ -34,6 +37,12 @@ export default function StudentForm({ onRefresh }) {
   useEffect(() => {
     carregar()
   }, [])
+
+  useEffect(() => {
+    if (cadastroAlunoAberto) {
+      carregar()
+    }
+  }, [cadastroAlunoAberto])
 
   async function carregar() {
     try {
@@ -61,21 +70,19 @@ export default function StudentForm({ onRefresh }) {
 
   const alunosDaTurmaDaSessao = useMemo(() => {
     if (!sessaoAtiva?.turma?.id) return []
-    return alunos.filter(
-      (aluno) => aluno.turma?.id === sessaoAtiva.turma.id
-    )
+    return alunos.filter((aluno) => aluno.turma?.id === sessaoAtiva.turma.id)
   }, [alunos, sessaoAtiva])
 
-    const colegasPossiveis = useMemo(() => {
+  const colegasPossiveis = useMemo(() => {
     if (!sessaoAtiva?.turma?.id) return []
 
     return alunos.filter((aluno) => {
-        const mesmaTurma = aluno.turma?.id === sessaoAtiva.turma.id
-        const naoEhEleMesmo = alunoSelecionado ? aluno.id !== alunoSelecionado.id : true
+      const mesmaTurma = aluno.turma?.id === sessaoAtiva.turma.id
+      const naoEhEleMesmo = alunoSelecionado ? aluno.id !== alunoSelecionado.id : true
 
-        return mesmaTurma && naoEhEleMesmo
+      return mesmaTurma && naoEhEleMesmo
     })
-    }, [alunos, sessaoAtiva, alunoSelecionado])
+  }, [alunos, sessaoAtiva, alunoSelecionado])
 
   async function handleCadastrarAluno(e) {
     e.preventDefault()
@@ -95,7 +102,7 @@ export default function StudentForm({ onRefresh }) {
       setNome('')
       setMatricula('')
       setTurmaId('')
-      setModalCadastroAberto(false)
+      setCadastroAlunoAberto(false)
       setMsg('Aluno cadastrado com sucesso.')
     } catch (err) {
       setErro(err.message)
@@ -220,38 +227,40 @@ export default function StudentForm({ onRefresh }) {
         )}
 
         <form className="form" onSubmit={handleEntrarNaFila}>
-          <label>
-            Aluno
-            <select
-              value={alunoId}
-              onChange={(e) => setAlunoId(e.target.value)}
-              disabled={!!meuChamado}
-              required
-            >
-              <option value="">Selecione seu nome</option>
-              {alunosDaTurmaDaSessao.length > 0
-                ? alunosDaTurmaDaSessao.map((aluno) => (
-                    <option key={aluno.id} value={aluno.id}>
-                      {aluno.nome_completo}
-                    </option>
-                  ))
-                : alunos.map((aluno) => (
-                    <option key={aluno.id} value={aluno.id}>
-                      {aluno.nome_completo}
-                    </option>
-                  ))}
-            </select>
-          </label>
+          <div className="field-header">
+            <label htmlFor="aluno-select">Aluno</label>
 
-          <div className="inline-actions">
             <button
               type="button"
-              className="secondary"
-              onClick={() => setModalCadastroAberto(true)}
+              className="icon-button"
+              onClick={() => setCadastroAlunoAberto(true)}
+              title="Cadastrar aluno"
+              aria-label="Cadastrar aluno"
             >
-              Cadastrar aluno
+              <span aria-hidden="true">👤➕</span>
             </button>
           </div>
+
+          <select
+            id="aluno-select"
+            value={alunoId}
+            onChange={(e) => setAlunoId(e.target.value)}
+            disabled={!!meuChamado}
+            required
+          >
+            <option value="">Selecione seu nome</option>
+            {alunosDaTurmaDaSessao.length > 0
+              ? alunosDaTurmaDaSessao.map((aluno) => (
+                  <option key={aluno.id} value={aluno.id}>
+                    {aluno.nome_completo}
+                  </option>
+                ))
+              : alunos.map((aluno) => (
+                  <option key={aluno.id} value={aluno.id}>
+                    {aluno.nome_completo}
+                  </option>
+                ))}
+          </select>
 
           <label>
             Descreva rapidamente a dúvida
@@ -287,11 +296,11 @@ export default function StudentForm({ onRefresh }) {
             <p><strong>Status:</strong> {meuChamado.status}</p>
             <p><strong>Descrição:</strong> {meuChamado.descricao_problema || 'Sem descrição.'}</p>
 
-            <button className="secondary" onClick={handleCancelar}>
+            <button type="button" className="secondary" onClick={handleCancelar}>
               Não preciso mais / cancelar
             </button>
 
-            <button className="secondary" onClick={handleResolviSozinho}>
+            <button type="button" className="secondary" onClick={handleResolviSozinho}>
               Resolvi sozinho
             </button>
 
@@ -314,15 +323,21 @@ export default function StudentForm({ onRefresh }) {
         )}
       </div>
 
-      {modalCadastroAberto && (
-        <div className="modal-backdrop" onClick={() => setModalCadastroAberto(false)}>
-          <div className="modal card" onClick={(e) => e.stopPropagation()}>
+      {cadastroAlunoAberto && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setCadastroAlunoAberto(false)}
+        >
+          <div
+            className="modal card"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="section-header">
               <h2>Cadastro de aluno</h2>
               <button
                 type="button"
                 className="ghost"
-                onClick={() => setModalCadastroAberto(false)}
+                onClick={() => setCadastroAlunoAberto(false)}
               >
                 Fechar
               </button>

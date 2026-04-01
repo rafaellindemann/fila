@@ -13,6 +13,7 @@ export default function App() {
   const [sessoes, setSessoes] = useState([])
   const [adminAuth, setAdminAuth] = useState(localStorage.getItem('fila_admin_auth') === 'true')
   const [aba, setAba] = useState('publico')
+  const [cadastroAlunoAberto, setCadastroAlunoAberto] = useState(false)
 
   const sessaoAtiva = useMemo(() => sessoes[0] || null, [sessoes])
 
@@ -47,34 +48,22 @@ export default function App() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'fila_chamados' },
-        (payload) => {
-          console.log('Realtime fila_chamados:', payload)
-          recarregar()
-        }
+        () => recarregar()
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'fila_sessoes' },
-        (payload) => {
-          console.log('Realtime fila_sessoes:', payload)
-          recarregar()
-        }
+        () => recarregar()
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'fila_alunos' },
-        (payload) => {
-          console.log('Realtime fila_alunos:', payload)
-          recarregar()
-        }
+        () => recarregar()
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'fila_interacoes' },
-        (payload) => {
-          console.log('Realtime fila_interacoes:', payload)
-          recarregar()
-        }
+        () => recarregar()
       )
       .subscribe((status) => {
         console.log('STATUS REALTIME:', status)
@@ -97,6 +86,11 @@ export default function App() {
   function logout() {
     localStorage.removeItem('fila_admin_auth')
     setAdminAuth(false)
+  }
+
+  function abrirCadastroAluno() {
+    setAba('aluno')
+    setCadastroAlunoAberto(true)
   }
 
   return (
@@ -127,6 +121,15 @@ export default function App() {
           </button>
 
           <button
+            className="icon-button"
+            onClick={abrirCadastroAluno}
+            title="Cadastrar aluno"
+            aria-label="Cadastrar aluno"
+          >
+            <span aria-hidden="true">👤＋</span>
+          </button>
+
+          <button
             className={aba === 'admin' ? 'active' : ''}
             onClick={() => setAba('admin')}
           >
@@ -138,7 +141,13 @@ export default function App() {
       <main className="main-grid">
         {aba === 'publico' && <QueueBoard fila={fila} />}
 
-        {aba === 'aluno' && <StudentForm onRefresh={carregarTudo} />}
+        {aba === 'aluno' && (
+          <StudentForm
+            onRefresh={carregarTudo}
+            cadastroAlunoAberto={cadastroAlunoAberto}
+            setCadastroAlunoAberto={setCadastroAlunoAberto}
+          />
+        )}
 
         {aba === 'admin' &&
           (adminAuth ? (
