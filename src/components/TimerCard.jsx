@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 
-export default function TimerCard({ active = false, seconds = 180, onFinish }) {
+export default function TimerCard({
+  active = false,
+  seconds = 180,
+  onFinish,
+  compact = false,
+}) {
   const [timeLeft, setTimeLeft] = useState(seconds)
 
   useEffect(() => {
@@ -23,15 +28,25 @@ export default function TimerCard({ active = false, seconds = 180, onFinish }) {
 
   if (!active) {
     return (
-      <div className="card timer-card">
-        <h3>Timer de atendimento</h3>
-        <p className="muted">Nenhum atendimento em andamento.</p>
+      <div className={compact ? 'timer-inline idle' : 'card timer-card'}>
+        {compact ? (
+          <span className="muted">sem timer</span>
+        ) : (
+          <>
+            <h3>Timer de atendimento</h3>
+            <p className="muted">Nenhum atendimento em andamento.</p>
+          </>
+        )}
       </div>
     )
   }
 
   const min = String(Math.floor(timeLeft / 60)).padStart(2, '0')
   const sec = String(timeLeft % 60).padStart(2, '0')
+
+  if (compact) {
+    return <div className="timer-inline">{min}:{sec}</div>
+  }
 
   return (
     <div className="card timer-card">

@@ -66,10 +66,16 @@ export default function StudentForm({ onRefresh }) {
     )
   }, [alunos, sessaoAtiva])
 
-  const colegasPossiveis = useMemo(() => {
-    if (!alunoSelecionado) return alunos
-    return alunos.filter((aluno) => aluno.id !== alunoSelecionado.id)
-  }, [alunos, alunoSelecionado])
+    const colegasPossiveis = useMemo(() => {
+    if (!sessaoAtiva?.turma?.id) return []
+
+    return alunos.filter((aluno) => {
+        const mesmaTurma = aluno.turma?.id === sessaoAtiva.turma.id
+        const naoEhEleMesmo = alunoSelecionado ? aluno.id !== alunoSelecionado.id : true
+
+        return mesmaTurma && naoEhEleMesmo
+    })
+    }, [alunos, sessaoAtiva, alunoSelecionado])
 
   async function handleCadastrarAluno(e) {
     e.preventDefault()
