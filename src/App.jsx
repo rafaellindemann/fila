@@ -17,12 +17,17 @@ export default function App() {
   const sessaoAtiva = useMemo(() => sessoes[0] || null, [sessoes])
 
   async function carregarTudo() {
-    const [filaData, sessoesData] = await Promise.all([
-      listarFilaAtiva(),
-      listarSessoesAtivas(),
-    ])
-    setFila(filaData)
-    setSessoes(sessoesData)
+    try {
+      const [filaData, sessoesData] = await Promise.all([
+        listarFilaAtiva(),
+        listarSessoesAtivas(),
+      ])
+
+      setFila(filaData)
+      setSessoes(sessoesData)
+    } catch (err) {
+      console.error('Erro ao carregar dados da fila:', err)
+    }
   }
 
   useEffect(() => {
@@ -30,17 +35,63 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    let ativo = true
+
+    const recarregar = async () => {
+      if (!ativo) return
+      await carregarTudo()
+    }
+
     const channel = supabase
-      .channel('fila-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'fila_chamados' }, carregarTudo)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'fila_sessoes' }, carregarTudo)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'fila_alunos' }, carregarTudo)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'fila_interacoes' }, carregarTudo)
-      .subscribe()
+      .channel('fila-realtime-global')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'fila_chamados' },
+        (payload) => {
+          console.log('Realtime fila_chamados:', payload)
+          recarregar()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'fila_sessoes' },
+        (payload) => {
+          console.log('Realtime fila_sessoes:', payload)
+          recarregar()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'fila_alunos' },
+        (payload) => {
+          console.log('Realtime fila_alunos:', payload)
+          recarregar()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'fila_interacoes' },
+        (payload) => {
+          console.log('Realtime fila_interacoes:', payload)
+          recarregar()
+        }
+      )
+      .subscribe((status) => {
+        console.log('STATUS REALTIME:', status)
+      })
 
     return () => {
+      ativo = false
       supabase.removeChannel(channel)
     }
+  }, [])
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      carregarTudo()
+    }, 5000)
+
+    return () => clearInterval(intervalId)
   }, [])
 
   function logout() {
@@ -61,13 +112,24 @@ export default function App() {
         </div>
 
         <nav className="tabs">
-          <button className={aba === 'publico' ? 'active' : ''} onClick={() => setAba('publico')}>
+          <button
+            className={aba === 'publico' ? 'active' : ''}
+            onClick={() => setAba('publico')}
+          >
             Painel
           </button>
-          <button className={aba === 'aluno' ? 'active' : ''} onClick={() => setAba('aluno')}>
+
+          <button
+            className={aba === 'aluno' ? 'active' : ''}
+            onClick={() => setAba('aluno')}
+          >
             Entrar na fila
           </button>
-          <button className={aba === 'admin' ? 'active' : ''} onClick={() => setAba('admin')}>
+
+          <button
+            className={aba === 'admin' ? 'active' : ''}
+            onClick={() => setAba('admin')}
+          >
             Admin
           </button>
         </nav>
@@ -78,18 +140,24 @@ export default function App() {
 
         {aba === 'aluno' && <StudentForm onRefresh={carregarTudo} />}
 
-        {aba === 'admin' && (
-          adminAuth ? (
+        {aba === 'admin' &&
+          (adminAuth ? (
             <>
               <div className="toolbar">
-                <button className="secondary" onClick={logout}>Sair do admin</button>
+                <button className="secondary" onClick={logout}>
+                  Sair do admin
+                </button>
               </div>
-              <AdminPanel fila={fila} sessaoAtiva={sessaoAtiva} onRefresh={carregarTudo} />
+
+              <AdminPanel
+                fila={fila}
+                sessaoAtiva={sessaoAtiva}
+                onRefresh={carregarTudo}
+              />
             </>
           ) : (
             <AdminLogin onLogin={() => setAdminAuth(true)} />
-          )
-        )}
+          ))}
       </main>
     </div>
   )
