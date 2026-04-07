@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
 import QueueBoard from './components/QueueBoard'
@@ -7,7 +7,7 @@ import AdminPanel from './components/AdminPanel'
 import AuthForm from './components/AuthForm'
 import CadastroPerfil from './pages/CadastroPerfil'
 
-import { listarFilaAtiva } from './services/chamados'
+import { listarFilaAtiva, limparChamadoLocal } from './services/chamados'
 import { listarSessoesAtivas } from './services/sessoes'
 import { buscarMeuUsuario } from './services/usuarios'
 import { getSession, onAuthStateChange, signOut } from './services/auth'
@@ -21,9 +21,14 @@ export default function App() {
   const [usuario, setUsuario] = useState(null)
 
   const [authLoading, setAuthLoading] = useState(true)
+  const [perfilChecked, setPerfilChecked] = useState(false)
   const [appLoading, setAppLoading] = useState(true)
 
   const [aba, setAba] = useState('publico')
+  const [loadingMsg, setLoadingMsg] = useState('Carregando autenticação...')
+  const [resettingSession, setResettingSession] = useState(false)
+
+  const authBootstrapRef = useRef(false)
 
   const sessaoAtiva = useMemo(() => sessoes[0] || null, [sessoes])
   const isAdmin = usuario?.papel === 'admin'
@@ -46,23 +51,34 @@ export default function App() {
 
   async function carregarPerfilUsuario() {
     try {
+      setPerfilChecked(false)
+      setLoadingMsg('Carregando perfil do usuário...')
+
       const meuUsuario = await buscarMeuUsuario()
       setUsuario(meuUsuario || null)
+
       return meuUsuario || null
     } catch (err) {
       console.error('Erro ao buscar perfil do usuário:', err)
       setUsuario(null)
       return null
+    } finally {
+      setPerfilChecked(true)
     }
   }
 
   async function bootstrapAuth() {
     try {
+      setAuthLoading(true)
+      setPerfilChecked(false)
+      setLoadingMsg('Carregando autenticação...')
+
       const sessao = await getSession()
       setSession(sessao)
 
       if (!sessao?.user) {
         setUsuario(null)
+        setPerfilChecked(true)
         return
       }
 
@@ -71,21 +87,84 @@ export default function App() {
       console.error('Erro ao carregar autenticação:', err)
       setSession(null)
       setUsuario(null)
+      setPerfilChecked(true)
     } finally {
       setAuthLoading(false)
+      setLoadingMsg('Carregando autenticação...')
+    }
+  }
+
+  function limparStoragesDoSupabase() {
+    const prefixes = ['sb-', 'supabase']
+    const storageKeys = []
+
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i)
+      if (!key) continue
+
+      const lowerKey = key.toLowerCase()
+      if (prefixes.some((prefix) => lowerKey.includes(prefix))) {
+        storageKeys.push(key)
+      }
+    }
+
+    storageKeys.forEach((key) => localStorage.removeItem(key))
+
+    const sessionStorageKeys = []
+    for (let i = 0; i < sessionStorage.length; i += 1) {
+      const key = sessionStorage.key(i)
+      if (!key) continue
+
+      const lowerKey = key.toLowerCase()
+      if (prefixes.some((prefix) => lowerKey.includes(prefix))) {
+        sessionStorageKeys.push(key)
+      }
+    }
+
+    sessionStorageKeys.forEach((key) => sessionStorage.removeItem(key))
+  }
+
+  async function handleResetSessao() {
+    try {
+      setResettingSession(true)
+
+      try {
+        await signOut()
+      } catch (err) {
+        console.warn('Falha ao encerrar sessão remotamente, limpando sessão local.', err)
+      }
+
+      limparChamadoLocal()
+      limparStoragesDoSupabase()
+
+      setSession(null)
+      setUsuario(null)
+      setPerfilChecked(true)
+      setAuthLoading(false)
+      setAba('publico')
+
+      window.location.reload()
+    } catch (err) {
+      console.error('Erro ao resetar sessão:', err)
+    } finally {
+      setResettingSession(false)
     }
   }
 
   useEffect(() => {
+    if (authBootstrapRef.current) return
+    authBootstrapRef.current = true
+
     let ativo = true
 
-    // failsafe para nunca ficar preso eternamente
     const timeoutId = setTimeout(() => {
-      if (ativo) {
-        console.warn('Timeout de autenticação acionado.')
-        setAuthLoading(false)
-      }
-    }, 6000)
+      if (!ativo) return
+
+      console.warn('Timeout de autenticação acionado.')
+      setLoadingMsg('A autenticação está demorando mais do que o esperado.')
+      setAuthLoading(false)
+      setPerfilChecked(true)
+    }, 8000)
 
     bootstrapAuth().finally(() => {
       clearTimeout(timeoutId)
@@ -109,6 +188,7 @@ export default function App() {
 
       if (!sessao?.user) {
         setUsuario(null)
+        setPerfilChecked(true)
         setAba('publico')
         return
       }
@@ -177,8 +257,10 @@ export default function App() {
   async function handleLogout() {
     try {
       await signOut()
+      limparChamadoLocal()
       setSession(null)
       setUsuario(null)
+      setPerfilChecked(true)
       setAba('publico')
     } catch (err) {
       console.error('Erro ao sair:', err)
@@ -189,7 +271,19 @@ export default function App() {
     return (
       <div className="app-shell">
         <div className="card">
-          <p>Carregando autenticação...</p>
+          <h2>Autenticação</h2>
+          <p>{loadingMsg}</p>
+
+          <div className="toolbar" style={{ marginTop: '1rem' }}>
+            <button
+              type="button"
+              className="secondary"
+              onClick={handleResetSessao}
+              disabled={resettingSession}
+            >
+              {resettingSession ? 'Limpando sessão...' : 'Cancelar e voltar ao login'}
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -208,6 +302,28 @@ export default function App() {
         <main className="main-grid">
           <AuthForm />
         </main>
+      </div>
+    )
+  }
+
+  if (!perfilChecked) {
+    return (
+      <div className="app-shell">
+        <div className="card">
+          <h2>Perfil</h2>
+          <p>Carregando perfil do usuário...</p>
+
+          <div className="toolbar" style={{ marginTop: '1rem' }}>
+            <button
+              type="button"
+              className="secondary"
+              onClick={handleResetSessao}
+              disabled={resettingSession}
+            >
+              {resettingSession ? 'Limpando sessão...' : 'Cancelar e voltar ao login'}
+            </button>
+          </div>
+        </div>
       </div>
     )
   }
