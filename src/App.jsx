@@ -44,79 +44,58 @@ export default function App() {
     }
   }
 
-async function carregarAuth() {
-  try {
-    /// *** debug
-    console.log('antes getSession')
-const sessao = await getSession()
-console.log('depois getSession', sessao)
+  async function carregarAuth() {
+    try {
+      const sessao = await getSession()
+      setSession(sessao)
 
-if (sessao?.user) {
-  console.log('antes buscarMeuUsuario')
-  const meuUsuario = await buscarMeuUsuario()
-  console.log('depois buscarMeuUsuario', meuUsuario)
-}
-    /// *** debug
-
-
-
-
-    console.log('Iniciando carregarAuth...')
-
-    // const sessao = await getSession()
-    // console.log('Sessão:', sessao)
-
-    // setSession(sessao)
-
-    // if (sessao?.user) {
-    //   const meuUsuario = await buscarMeuUsuario()
-    //   console.log('Usuário do sistema:', meuUsuario)
-    //   setUsuario(meuUsuario || null)
-    // } else {
-    //   setUsuario(null)
-    // }
-  } catch (err) {
-    console.error('Erro ao carregar autenticação:', err)
-    setSession(null)
-    setUsuario(null)
-  } finally {
-    console.log('Finalizando authLoading')
-    setAuthLoading(false)
+      if (sessao?.user) {
+        const meuUsuario = await buscarMeuUsuario()
+        setUsuario(meuUsuario || null)
+      } else {
+        setUsuario(null)
+      }
+    } catch (err) {
+      console.error('Erro ao carregar autenticação:', err)
+      setSession(null)
+      setUsuario(null)
+    } finally {
+      setAuthLoading(false)
+    }
   }
-}
 
   useEffect(() => {
     carregarAuth()
     carregarTudo()
   }, [])
 
-useEffect(() => {
-  const {
-    data: { subscription },
-  } = onAuthStateChange(async (_event, sessao) => {
-    console.log('Auth state mudou:', _event, sessao)
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = onAuthStateChange(async (_event, sessao) => {
+      console.log('Auth state mudou:', _event, sessao)
 
-    setSession(sessao)
+      setSession(sessao)
 
-    if (sessao?.user) {
-      try {
-        const meuUsuario = await buscarMeuUsuario()
-        setUsuario(meuUsuario || null)
-      } catch (err) {
-        console.error('Erro ao buscar usuário autenticado:', err)
+      if (sessao?.user) {
+        try {
+          const meuUsuario = await buscarMeuUsuario()
+          setUsuario(meuUsuario || null)
+        } catch (err) {
+          console.error('Erro ao buscar usuário autenticado:', err)
+          setUsuario(null)
+        }
+      } else {
         setUsuario(null)
       }
-    } else {
-      setUsuario(null)
+
+      setAuthLoading(false)
+    })
+
+    return () => {
+      subscription.unsubscribe()
     }
-
-    setAuthLoading(false)
-  })
-
-  return () => {
-    subscription.unsubscribe()
-  }
-}, [])
+  }, [])
 
   useEffect(() => {
     let ativo = true
@@ -128,9 +107,21 @@ useEffect(() => {
 
     const channel = supabase
       .channel('fila-realtime-global')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'fila_chamados' }, recarregar)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'fila_sessoes' }, recarregar)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'fila_interacoes' }, recarregar)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'fila_chamados' },
+        recarregar
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'fila_sessoes' },
+        recarregar
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'fila_interacoes' },
+        recarregar
+      )
       .subscribe((status) => {
         console.log('STATUS REALTIME:', status)
       })
