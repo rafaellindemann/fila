@@ -38,6 +38,7 @@ export async function listarUsuariosDaTurma(turmaId) {
     .from('fila_usuarios')
     .select('*')
     .eq('turma_id', turmaId)
+    .eq('papel', 'aluno')
     .order('nome_completo')
 
   if (error) throw error

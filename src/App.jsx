@@ -44,22 +44,19 @@ export default function App() {
     }
   }
 
-  async function carregarPerfilUsuario(sessao) {
-    if (!sessao?.user) {
-      setUsuario(null)
-      return
-    }
-
+  async function carregarPerfilUsuario() {
     try {
       const meuUsuario = await buscarMeuUsuario()
       setUsuario(meuUsuario || null)
+      return meuUsuario || null
     } catch (err) {
       console.error('Erro ao buscar perfil do usuário:', err)
       setUsuario(null)
+      return null
     }
   }
 
-  async function carregarAuth() {
+  async function bootstrapAuth() {
     try {
       const sessao = await getSession()
       setSession(sessao)
@@ -69,7 +66,7 @@ export default function App() {
         return
       }
 
-      await carregarPerfilUsuario(sessao)
+      await carregarPerfilUsuario()
     } catch (err) {
       console.error('Erro ao carregar autenticação:', err)
       setSession(null)
@@ -80,30 +77,49 @@ export default function App() {
   }
 
   useEffect(() => {
-    carregarAuth()
+    let ativo = true
+
+    // failsafe para nunca ficar preso eternamente
+    const timeoutId = setTimeout(() => {
+      if (ativo) {
+        console.warn('Timeout de autenticação acionado.')
+        setAuthLoading(false)
+      }
+    }, 6000)
+
+    bootstrapAuth().finally(() => {
+      clearTimeout(timeoutId)
+    })
+
     carregarTudo()
+
+    return () => {
+      ativo = false
+      clearTimeout(timeoutId)
+    }
   }, [])
 
-useEffect(() => {
-  const {
-    data: { subscription },
-  } = onAuthStateChange(async (event, sessao) => {
-    console.log('Auth state mudou:', event, sessao)
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = onAuthStateChange(async (event, sessao) => {
+      console.log('Auth state mudou:', event, sessao)
 
-    setSession(sessao)
+      setSession(sessao)
 
-    if (!sessao?.user) {
-      setUsuario(null)
-      return
+      if (!sessao?.user) {
+        setUsuario(null)
+        setAba('publico')
+        return
+      }
+
+      await carregarPerfilUsuario()
+    })
+
+    return () => {
+      subscription.unsubscribe()
     }
-
-    await carregarPerfilUsuario(sessao)
-  })
-
-  return () => {
-    subscription.unsubscribe()
-  }
-}, [])
+  }, [])
 
   useEffect(() => {
     let ativo = true
@@ -213,7 +229,7 @@ useEffect(() => {
         </header>
 
         <main className="main-grid">
-          <CadastroPerfil onDone={carregarAuth} />
+          <CadastroPerfil onDone={bootstrapAuth} />
         </main>
       </div>
     )
