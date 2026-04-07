@@ -1,35 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { signIn, signUp } from '../services/auth'
-import { criarUsuario } from '../services/usuarios'
-import { listarTurmasAtivas } from '../services/turmas'
 
 export default function AuthForm({ onAuthSuccess }) {
   const [modo, setModo] = useState('login')
-  const [turmas, setTurmas] = useState([])
 
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
 
-  const [nome, setNome] = useState('')
-  const [matricula, setMatricula] = useState('')
-  const [turmaId, setTurmaId] = useState('')
-
   const [erro, setErro] = useState('')
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    carregarTurmas()
-  }, [])
-
-  async function carregarTurmas() {
-    try {
-      const data = await listarTurmasAtivas()
-      setTurmas(data)
-    } catch (err) {
-      setErro(err.message)
-    }
-  }
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -69,15 +49,7 @@ export default function AuthForm({ onAuthSuccess }) {
         throw new Error('Usuário criado sem ID válido no Auth.')
       }
 
-      await criarUsuario({
-        id: user.id,
-        nome_completo: nome,
-        matricula,
-        turma_id: Number(turmaId),
-        papel: 'aluno',
-      })
-
-      setMsg('Cadastro realizado com sucesso. Você já pode usar o sistema.')
+      setMsg('Conta criada com sucesso. Agora complete seu cadastro no sistema.')
       onAuthSuccess?.()
     } catch (err) {
       setErro(err.message)
@@ -96,7 +68,11 @@ export default function AuthForm({ onAuthSuccess }) {
             <button
               type="button"
               className={modo === 'login' ? 'secondary active' : 'secondary'}
-              onClick={() => setModo('login')}
+              onClick={() => {
+                setModo('login')
+                setErro('')
+                setMsg('')
+              }}
             >
               Login
             </button>
@@ -104,7 +80,11 @@ export default function AuthForm({ onAuthSuccess }) {
             <button
               type="button"
               className={modo === 'cadastro' ? 'secondary active' : 'secondary'}
-              onClick={() => setModo('cadastro')}
+              onClick={() => {
+                setModo('cadastro')
+                setErro('')
+                setMsg('')
+              }}
             >
               Cadastro
             </button>
@@ -142,40 +122,6 @@ export default function AuthForm({ onAuthSuccess }) {
           </form>
         ) : (
           <form className="form" onSubmit={handleCadastro}>
-            <label>
-              Nome completo
-              <input
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                required
-              />
-            </label>
-
-            <label>
-              Matrícula
-              <input
-                value={matricula}
-                onChange={(e) => setMatricula(e.target.value)}
-                required
-              />
-            </label>
-
-            <label>
-              Turma
-              <select
-                value={turmaId}
-                onChange={(e) => setTurmaId(e.target.value)}
-                required
-              >
-                <option value="">Selecione a turma</option>
-                {turmas.map((turma) => (
-                  <option key={turma.id} value={turma.id}>
-                    {turma.apelido} — {turma.nome}
-                  </option>
-                ))}
-              </select>
-            </label>
-
             <label>
               Email
               <input

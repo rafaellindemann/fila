@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase } from '../lib/supabase'
 
 const STORAGE_KEY = 'fila_chamado_ativo'
 
