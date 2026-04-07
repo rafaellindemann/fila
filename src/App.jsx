@@ -44,17 +44,32 @@ export default function App() {
     }
   }
 
+  async function carregarPerfilUsuario(sessao) {
+    if (!sessao?.user) {
+      setUsuario(null)
+      return
+    }
+
+    try {
+      const meuUsuario = await buscarMeuUsuario()
+      setUsuario(meuUsuario || null)
+    } catch (err) {
+      console.error('Erro ao buscar perfil do usuário:', err)
+      setUsuario(null)
+    }
+  }
+
   async function carregarAuth() {
     try {
       const sessao = await getSession()
       setSession(sessao)
 
-      if (sessao?.user) {
-        const meuUsuario = await buscarMeuUsuario()
-        setUsuario(meuUsuario || null)
-      } else {
+      if (!sessao?.user) {
         setUsuario(null)
+        return
       }
+
+      await carregarPerfilUsuario(sessao)
     } catch (err) {
       console.error('Erro ao carregar autenticação:', err)
       setSession(null)
@@ -72,23 +87,19 @@ export default function App() {
   useEffect(() => {
     const {
       data: { subscription },
-    } = onAuthStateChange(async (_event, sessao) => {
-      console.log('Auth state mudou:', _event, sessao)
+    } = onAuthStateChange(async (event, sessao) => {
+      console.log('Auth state mudou:', event, sessao)
 
+      setAuthLoading(true)
       setSession(sessao)
 
-      if (sessao?.user) {
-        try {
-          const meuUsuario = await buscarMeuUsuario()
-          setUsuario(meuUsuario || null)
-        } catch (err) {
-          console.error('Erro ao buscar usuário autenticado:', err)
-          setUsuario(null)
-        }
-      } else {
+      if (!sessao?.user) {
         setUsuario(null)
+        setAuthLoading(false)
+        return
       }
 
+      await carregarPerfilUsuario(sessao)
       setAuthLoading(false)
     })
 
@@ -182,7 +193,7 @@ export default function App() {
         </header>
 
         <main className="main-grid">
-          <AuthForm onAuthSuccess={carregarAuth} />
+          <AuthForm />
         </main>
       </div>
     )

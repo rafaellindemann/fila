@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { signIn, signUp } from '../services/auth'
 
-export default function AuthForm({ onAuthSuccess }) {
+export default function AuthForm() {
   const [modo, setModo] = useState('login')
 
   const [email, setEmail] = useState('')
@@ -22,10 +22,8 @@ export default function AuthForm({ onAuthSuccess }) {
         email,
         password: senha,
       })
-
-      onAuthSuccess?.()
     } catch (err) {
-      setErro(err.message)
+      setErro(err.message || 'Erro ao entrar.')
     } finally {
       setLoading(false)
     }
@@ -50,9 +48,8 @@ export default function AuthForm({ onAuthSuccess }) {
       }
 
       setMsg('Conta criada com sucesso. Agora complete seu cadastro no sistema.')
-      onAuthSuccess?.()
     } catch (err) {
-      setErro(err.message)
+      setErro(err.message || 'Erro ao criar conta.')
     } finally {
       setLoading(false)
     }
@@ -117,7 +114,7 @@ export default function AuthForm({ onAuthSuccess }) {
             {erro && <p className="error">{erro}</p>}
 
             <button type="submit" disabled={loading}>
-              Entrar
+              {loading ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
         ) : (
@@ -146,7 +143,7 @@ export default function AuthForm({ onAuthSuccess }) {
             {erro && <p className="error">{erro}</p>}
 
             <button type="submit" disabled={loading}>
-              Criar conta
+              {loading ? 'Criando conta...' : 'Criar conta'}
             </button>
           </form>
         )}

@@ -14,8 +14,10 @@ export async function criarPerfil({ id, nome, matricula, turma_id }) {
 export async function buscarMeuUsuario() {
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser()
 
+  if (userError) throw userError
   if (!user) return null
 
   const { data, error } = await supabase
@@ -25,10 +27,10 @@ export async function buscarMeuUsuario() {
       turma:fila_turmas (*)
     `)
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   if (error) throw error
-  return data
+  return data || null
 }
 
 export async function listarUsuariosDaTurma(turmaId) {
