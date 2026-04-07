@@ -345,7 +345,11 @@ export default function App() {
         </header>
 
         <main className="main-grid">
-          <CadastroPerfil onDone={bootstrapAuth} />
+          <CadastroPerfil
+            onDone={async () => {
+              await carregarPerfilUsuario()
+            }}
+          />
         </main>
       </div>
     )

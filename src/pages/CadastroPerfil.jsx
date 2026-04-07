@@ -39,51 +39,51 @@ export default function CadastroPerfil({ onDone }) {
     }
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setErro('')
+async function handleSubmit(e) {
+  e.preventDefault()
+  setErro('')
 
-    if (!nome.trim()) {
-      setErro('Informe o nome completo.')
-      return
-    }
-
-    if (!matricula.trim()) {
-      setErro('Informe a matrícula.')
-      return
-    }
-
-    if (!turmaId) {
-      setErro('Selecione a turma.')
-      return
-    }
-
-    try {
-      setSaving(true)
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user?.id) {
-        throw new Error('Usuário autenticado não encontrado.')
-      }
-
-      await criarPerfil({
-        id: user.id,
-        nome: nome.trim(),
-        matricula: matricula.trim(),
-        turma_id: turmaId,
-      })
-
-      await onDone?.()
-    } catch (err) {
-      console.error('Erro ao salvar perfil:', err)
-      setErro(err.message || 'Não foi possível salvar o perfil.')
-    } finally {
-      setSaving(false)
-    }
+  if (!nome.trim()) {
+    setErro('Informe o nome completo.')
+    return
   }
+
+  if (!matricula.trim()) {
+    setErro('Informe a matrícula.')
+    return
+  }
+
+  if (!turmaId) {
+    setErro('Selecione a turma.')
+    return
+  }
+
+  try {
+    setSaving(true)
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user?.id) {
+      throw new Error('Usuário autenticado não encontrado.')
+    }
+
+    await criarPerfil({
+      id: user.id,
+      nome: nome.trim(),
+      matricula: matricula.trim(),
+      turma_id: turmaId,
+    })
+
+    await onDone?.()
+  } catch (err) {
+    console.error('Erro ao salvar perfil:', err)
+    setErro(err.message || 'Não foi possível salvar o perfil.')
+  } finally {
+    setSaving(false)
+  }
+}
 
   return (
     <div className="card auth-card">
