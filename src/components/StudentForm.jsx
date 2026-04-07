@@ -11,10 +11,7 @@ import {
 } from '../services/interacoes'
 import { listarUsuariosDaTurma } from '../services/usuarios'
 
-export default function StudentForm({
-  onRefresh,
-  usuario,
-}) {
+export default function StudentForm({ onRefresh, usuario }) {
   const [sessoes, setSessoes] = useState([])
   const [meuChamado, setMeuChamado] = useState(null)
   const [colegas, setColegas] = useState([])
@@ -25,34 +22,42 @@ export default function StudentForm({
   const [msg, setMsg] = useState('')
   const [erro, setErro] = useState('')
   const [loading, setLoading] = useState(false)
+  const [carregando, setCarregando] = useState(true)
 
   useEffect(() => {
     carregar()
-  }, [])
+  }, [usuario?.id])
 
   async function carregar() {
     try {
+      setErro('')
+      setCarregando(true)
+
       const [listaSessoes, chamado] = await Promise.all([
         listarSessoesAtivas(),
         buscarMeuChamado(),
       ])
 
-      setSessoes(listaSessoes)
-      setMeuChamado(chamado)
+      setSessoes(listaSessoes || [])
+      setMeuChamado(chamado || null)
 
       if (usuario?.turma?.id) {
         const lista = await listarUsuariosDaTurma(usuario.turma.id)
-        setColegas(lista)
+        setColegas(lista || [])
+      } else {
+        setColegas([])
       }
     } catch (err) {
-      setErro(err.message)
+      setErro(err.message || 'Erro ao carregar dados do aluno.')
+    } finally {
+      setCarregando(false)
     }
   }
 
   const sessaoAtiva = sessoes[0] || null
 
   const colegasPossiveis = useMemo(() => {
-    return colegas.filter((c) => c.id !== usuario.id)
+    return colegas.filter((c) => c.id !== usuario?.id)
   }, [colegas, usuario])
 
   const podeAbrirChamado = useMemo(() => {
@@ -93,7 +98,7 @@ export default function StudentForm({
       await carregar()
       onRefresh?.()
     } catch (err) {
-      setErro(err.message)
+      setErro(err.message || 'Erro ao entrar na fila.')
     } finally {
       setLoading(false)
     }
@@ -102,6 +107,7 @@ export default function StudentForm({
   async function handleCancelar() {
     setErro('')
     setMsg('')
+    setLoading(true)
 
     try {
       await cancelarMeuChamado()
@@ -111,13 +117,16 @@ export default function StudentForm({
       await carregar()
       onRefresh?.()
     } catch (err) {
-      setErro(err.message)
+      setErro(err.message || 'Erro ao cancelar chamado.')
+    } finally {
+      setLoading(false)
     }
   }
 
   async function handleResolviSozinho() {
     setErro('')
     setMsg('')
+    setLoading(true)
 
     try {
       await registrarResolvidoSozinho()
@@ -127,13 +136,16 @@ export default function StudentForm({
       await carregar()
       onRefresh?.()
     } catch (err) {
-      setErro(err.message)
+      setErro(err.message || 'Erro ao registrar resolução.')
+    } finally {
+      setLoading(false)
     }
   }
 
   async function handleFuiAjudado() {
     setErro('')
     setMsg('')
+    setLoading(true)
 
     try {
       if (!colegaId) {
@@ -145,7 +157,7 @@ export default function StudentForm({
       }
 
       await registrarAjudaDoColega({
-        resolvido_por_usuario_id: Number(colegaId),
+        resolvido_por_usuario_id: colegaId,
       })
 
       setMeuChamado(null)
@@ -155,7 +167,9 @@ export default function StudentForm({
       await carregar()
       onRefresh?.()
     } catch (err) {
-      setErro(err.message)
+      setErro(err.message || 'Erro ao registrar ajuda do colega.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -170,18 +184,15 @@ export default function StudentForm({
 
         {sessaoAtiva ? (
           <p className="muted">
-            Sessão ativa: <strong>{sessaoAtiva.turma?.apelido}</strong>
+            Sessão ativa:{' '}
+            <strong>{sessaoAtiva.turma?.apelido || sessaoAtiva.turma?.nome}</strong>
           </p>
         ) : (
-          <p className="muted">
-            Não há sessão ativa no momento.
-          </p>
+          <p className="muted">Não há sessão ativa no momento.</p>
         )}
 
         {!podeAbrirChamado && sessaoAtiva && (
-          <p className="error">
-            Você não pertence à turma desta sessão.
-          </p>
+          <p className="error">Você não pertence à turma desta sessão.</p>
         )}
 
         <form className="form" onSubmit={handleEntrarNaFila}>
@@ -191,7 +202,7 @@ export default function StudentForm({
               rows="3"
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
-              disabled={!!meuChamado}
+              disabled={!!meuChamado || carregando || loading}
               placeholder="Opcional"
             />
           </label>
@@ -201,9 +212,9 @@ export default function StudentForm({
 
           <button
             type="submit"
-            disabled={!podeAbrirChamado || !!meuChamado || loading}
+            disabled={!podeAbrirChamado || !!meuChamado || loading || carregando}
           >
-            Entrar na fila
+            {loading ? 'Enviando...' : 'Entrar na fila'}
           </button>
         </form>
       </div>
@@ -211,18 +222,36 @@ export default function StudentForm({
       <div className="card">
         <h2>Meu chamado</h2>
 
-        {!meuChamado ? (
+        {carregando ? (
+          <p className="muted">Carregando...</p>
+        ) : !meuChamado ? (
           <p className="muted">Você não possui chamado ativo.</p>
         ) : (
           <div className="form">
-            <p><strong>Status:</strong> {meuChamado.status}</p>
-            <p><strong>Descrição:</strong> {meuChamado.descricao_problema || 'Sem descrição'}</p>
+            <p>
+              <strong>Status:</strong> {meuChamado.status}
+            </p>
 
-            <button className="secondary" onClick={handleCancelar}>
+            <p>
+              <strong>Descrição:</strong>{' '}
+              {meuChamado.descricao_problema || 'Sem descrição'}
+            </p>
+
+            <button
+              type="button"
+              className="secondary"
+              onClick={handleCancelar}
+              disabled={loading}
+            >
               Cancelar
             </button>
 
-            <button className="secondary" onClick={handleResolviSozinho}>
+            <button
+              type="button"
+              className="secondary"
+              onClick={handleResolviSozinho}
+              disabled={loading}
+            >
               Resolvi sozinho
             </button>
 
@@ -231,6 +260,7 @@ export default function StudentForm({
               <select
                 value={colegaId}
                 onChange={(e) => setColegaId(e.target.value)}
+                disabled={loading}
               >
                 <option value="">Selecione</option>
                 {colegasPossiveis.map((c) => (
@@ -241,7 +271,11 @@ export default function StudentForm({
               </select>
             </label>
 
-            <button onClick={handleFuiAjudado}>
+            <button
+              type="button"
+              onClick={handleFuiAjudado}
+              disabled={loading || !colegaId}
+            >
               Registrar ajuda
             </button>
           </div>

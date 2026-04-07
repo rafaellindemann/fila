@@ -37,21 +37,23 @@ export async function listarFilaAtiva() {
     .select('*')
 
   if (error) throw error
-  return data
+  return data || []
 }
 
-export async function entrarNaFila({ sessao_id, aluno_id, descricao_problema }) {
+export async function entrarNaFila({ sessao_id, perfil_id, descricao_problema }) {
   const token_edicao = gerarTokenEdicao()
 
   const { data, error } = await supabase
     .from('fila_chamados')
-    .insert([{
-      sessao_id,
-      aluno_id,
-      descricao_problema: descricao_problema?.trim() || null,
-      status: 'aguardando',
-      token_edicao,
-    }])
+    .insert([
+      {
+        sessao_id,
+        perfil_id,
+        descricao_problema: descricao_problema?.trim() || null,
+        status: 'aguardando',
+        token_edicao,
+      },
+    ])
     .select()
     .single()
 
@@ -92,6 +94,12 @@ export async function finalizarChamado(chamadoId) {
     .single()
 
   if (error) throw error
+
+  const meuChamado = lerChamadoLocal()
+  if (meuChamado?.chamadoId === chamadoId) {
+    limparChamadoLocal()
+  }
+
   return data
 }
 
@@ -107,12 +115,20 @@ export async function cancelarChamadoAdmin(chamadoId) {
     .single()
 
   if (error) throw error
+
+  const meuChamado = lerChamadoLocal()
+  if (meuChamado?.chamadoId === chamadoId) {
+    limparChamadoLocal()
+  }
+
   return data
 }
 
 export async function cancelarMeuChamado() {
   const meuChamado = lerChamadoLocal()
-  if (!meuChamado) throw new Error('Nenhum chamado ativo encontrado neste dispositivo.')
+  if (!meuChamado) {
+    throw new Error('Nenhum chamado ativo encontrado neste dispositivo.')
+  }
 
   const { data, error } = await supabase
     .from('fila_chamados')
