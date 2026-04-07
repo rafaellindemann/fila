@@ -84,29 +84,26 @@ export default function App() {
     carregarTudo()
   }, [])
 
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = onAuthStateChange(async (event, sessao) => {
-      console.log('Auth state mudou:', event, sessao)
+useEffect(() => {
+  const {
+    data: { subscription },
+  } = onAuthStateChange(async (event, sessao) => {
+    console.log('Auth state mudou:', event, sessao)
 
-      setAuthLoading(true)
-      setSession(sessao)
+    setSession(sessao)
 
-      if (!sessao?.user) {
-        setUsuario(null)
-        setAuthLoading(false)
-        return
-      }
-
-      await carregarPerfilUsuario(sessao)
-      setAuthLoading(false)
-    })
-
-    return () => {
-      subscription.unsubscribe()
+    if (!sessao?.user) {
+      setUsuario(null)
+      return
     }
-  }, [])
+
+    await carregarPerfilUsuario(sessao)
+  })
+
+  return () => {
+    subscription.unsubscribe()
+  }
+}, [])
 
   useEffect(() => {
     let ativo = true
