@@ -3,6 +3,8 @@
 - --Layout da fila com card para aproveitar melhor a tela
 - -- salvar a pergunta/dúvida?
 
+- O tempo do atendimento ativo tá aparecendo no admin, mas não no painel. O tempo precisa ser regressivo, ao chegar a 0 avisar com borda vermelha piscando no timer e efeito pulse também
+- criar o menu de config no admin, pra configurar o tempo de atendimento
 - Botão de "ajudei" na fila
 - recuperação de senha
 - limitar campo de pergunta a 300 caracteres
