@@ -169,7 +169,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
               </div>
 
               <p className="atendimento-problema destaque-pergunta">
-                {emAtendimento.descricao_problema || 'Sem descrição informada.'}
+                {emAtendimento.descricao_problema || '🤫'}
               </p>
 
               <div className="admin-actions">
@@ -209,7 +209,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
                   <div className="queue-main">
                     <strong>{item.nome_completo}</strong>
                     <p className="queue-problema-small destaque-pergunta">
-                      {item.descricao_problema || 'Sem descrição informada.'}
+                      {item.descricao_problema || '🙊'}
                     </p>
                   </div>
 
