@@ -174,112 +174,135 @@ export default function StudentForm({ onRefresh, usuario }) {
   }
 
   return (
-    <div className="student-layout">
-      <div className="card">
-        <h2>Abrir chamado</h2>
+    <div className="student-stack">
+      <div className="card student-hero-card">
+        <div className="student-hero-top">
+          <div>
+            <h2>Meu acesso</h2>
+            <p className="muted">
+              Logado como <strong>{usuario.nome_completo}</strong>
+            </p>
+          </div>
 
-        <p className="muted">
-          Você está como <strong>{usuario.nome_completo}</strong>
-        </p>
+          <span className="badge">
+            {usuario?.turma?.apelido || usuario?.turma?.nome || 'Sem turma'}
+          </span>
+        </div>
 
         {sessaoAtiva ? (
-          <p className="muted">
-            Sessão ativa:{' '}
-            <strong>{sessaoAtiva.turma?.apelido || sessaoAtiva.turma?.nome}</strong>
-          </p>
+          <div className="student-session-banner">
+            <strong>Sessão ativa:</strong>{' '}
+            {sessaoAtiva.turma?.apelido || sessaoAtiva.turma?.nome}
+            {sessaoAtiva.titulo ? ` — ${sessaoAtiva.titulo}` : ''}
+          </div>
         ) : (
-          <p className="muted">Não há sessão ativa no momento.</p>
+          <div className="student-session-banner muted">
+            Não há sessão ativa no momento.
+          </div>
         )}
 
         {!podeAbrirChamado && sessaoAtiva && (
           <p className="error">Você não pertence à turma desta sessão.</p>
         )}
-
-        <form className="form" onSubmit={handleEntrarNaFila}>
-          <label>
-            Descreva sua dúvida
-            <textarea
-              rows="3"
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              disabled={!!meuChamado || carregando || loading}
-              placeholder="Opcional"
-            />
-          </label>
-
-          {msg && <p className="success">{msg}</p>}
-          {erro && <p className="error">{erro}</p>}
-
-          <button
-            type="submit"
-            disabled={!podeAbrirChamado || !!meuChamado || loading || carregando}
-          >
-            {loading ? 'Enviando...' : 'Entrar na fila'}
-          </button>
-        </form>
       </div>
 
-      <div className="card">
-        <h2>Meu chamado</h2>
+      <div className="student-grid-2">
+        <div className="card">
+          <div className="section-header">
+            <h2>Abrir chamado</h2>
+            <span className="badge">
+              {meuChamado ? 'Você já está na fila' : 'Novo chamado'}
+            </span>
+          </div>
 
-        {carregando ? (
-          <p className="muted">Carregando...</p>
-        ) : !meuChamado ? (
-          <p className="muted">Você não possui chamado ativo.</p>
-        ) : (
-          <div className="form">
-            <p>
-              <strong>Status:</strong> {meuChamado.status}
-            </p>
-
-            <p>
-              <strong>Descrição:</strong>{' '}
-              {meuChamado.descricao_problema || 'Sem descrição'}
-            </p>
-
-            <button
-              type="button"
-              className="secondary"
-              onClick={handleCancelar}
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-
-            <button
-              type="button"
-              className="secondary"
-              onClick={handleResolviSozinho}
-              disabled={loading}
-            >
-              Resolvi sozinho
-            </button>
-
+          <form className="form" onSubmit={handleEntrarNaFila}>
             <label>
-              Fui ajudado por colega
-              <select
-                value={colegaId}
-                onChange={(e) => setColegaId(e.target.value)}
-                disabled={loading}
-              >
-                <option value="">Selecione</option>
-                {colegasPossiveis.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome_completo}
-                  </option>
-                ))}
-              </select>
+              Descreva sua dúvida
+              <textarea
+                rows="5"
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                disabled={!!meuChamado || carregando || loading}
+                placeholder="Ex.: erro no fetch, dúvida sobre map/filter, problema com useEffect..."
+              />
             </label>
 
+            {msg && <p className="success">{msg}</p>}
+            {erro && <p className="error">{erro}</p>}
+
             <button
-              type="button"
-              onClick={handleFuiAjudado}
-              disabled={loading || !colegaId}
+              type="submit"
+              disabled={!podeAbrirChamado || !!meuChamado || loading || carregando}
             >
-              Registrar ajuda
+              {loading ? 'Enviando...' : 'Entrar na fila'}
             </button>
+          </form>
+        </div>
+
+        <div className="card">
+          <div className="section-header">
+            <h2>Meu chamado</h2>
+            {meuChamado && <span className={`status ${meuChamado.status}`}>{meuChamado.status}</span>}
           </div>
-        )}
+
+          {carregando ? (
+            <p className="muted">Carregando...</p>
+          ) : !meuChamado ? (
+            <div className="empty-state">
+              <p className="muted">Você não possui chamado ativo.</p>
+            </div>
+          ) : (
+            <div className="form">
+              <div className="destaque-pergunta">
+                {meuChamado.descricao_problema || 'Sem descrição informada.'}
+              </div>
+
+              <div className="student-action-grid">
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={handleCancelar}
+                  disabled={loading}
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={handleResolviSozinho}
+                  disabled={loading}
+                >
+                  Resolvi sozinho
+                </button>
+              </div>
+
+              <label>
+                Fui ajudado por colega
+                <select
+                  value={colegaId}
+                  onChange={(e) => setColegaId(e.target.value)}
+                  disabled={loading}
+                >
+                  <option value="">Selecione</option>
+                  {colegasPossiveis.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome_completo}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <button
+                type="button"
+                onClick={handleFuiAjudado}
+                disabled={loading || !colegaId}
+              >
+                Registrar ajuda
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

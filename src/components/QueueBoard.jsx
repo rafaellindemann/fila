@@ -3,7 +3,7 @@ export default function QueueBoard({ fila }) {
   const aguardando = fila.filter((item) => item.status === 'aguardando')
 
   return (
-    <div className="queue-board-public">
+    <div className="queue-board-public datashow-mode">
       {emAtendimento && (
         <div className="card public-now-serving">
           <div className="public-card-top">
@@ -12,13 +12,14 @@ export default function QueueBoard({ fila }) {
           </div>
 
           <h2>{emAtendimento.nome_completo}</h2>
+
           <p className="public-card-question destaque-pergunta">
             {emAtendimento.descricao_problema || 'Sem descrição informada.'}
           </p>
         </div>
       )}
 
-      <div className="card">
+      <div className="card datashow-queue-card">
         <div className="section-header">
           <h2>Fila atual</h2>
           <span className="badge">{aguardando.length} aguardando</span>
@@ -27,9 +28,9 @@ export default function QueueBoard({ fila }) {
         {aguardando.length === 0 ? (
           <p className="muted">Nenhum aluno na fila.</p>
         ) : (
-          <div className="queue-cards-grid">
+          <div className="queue-cards-grid datashow-grid">
             {aguardando.map((item, index) => (
-              <article className="queue-public-card" key={item.chamado_id}>
+              <article className="queue-public-card datashow-public-card" key={item.chamado_id}>
                 <div className="queue-public-card-top">
                   <div className="queue-public-pos">{index + 1}</div>
                   <div className="queue-public-name">{item.nome_completo}</div>
