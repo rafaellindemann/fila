@@ -9,6 +9,7 @@
 - ao encerrar uma sessão que tem chamados abertos, fechar eles com 'ficou no vácuo'
 - deslogar no unmount?
 - dashboard de admin
+- mensagem de explicação e confirmação no registrar ajuda
 
 
 - --limitar campo de pergunta a 300 caracteres
