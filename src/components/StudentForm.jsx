@@ -263,7 +263,7 @@ export default function StudentForm({ onRefresh, usuario }) {
           ) : (
             <div className="form">
               <div className="destaque-pergunta">
-                {meuChamado.descricao_problema || 'Sem descrição informada.'}
+                {meuChamado.descricao_problema || '🔇'}
               </div>
 
               <div className="student-action-grid">

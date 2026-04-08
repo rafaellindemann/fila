@@ -20,7 +20,7 @@ export default function QueueBoard({ fila }) {
           <h2>{emAtendimento.nome_completo}</h2>
 
           <p className="public-card-question destaque-pergunta">
-            {emAtendimento.descricao_problema || 'Sem descrição informada.'}
+            {emAtendimento.descricao_problema || '🔇'}
           </p>
         </div>
       )}
@@ -43,7 +43,7 @@ export default function QueueBoard({ fila }) {
                 </div>
 
                 <p className="queue-public-question destaque-pergunta">
-                  {item.descricao_problema || 'Sem descrição informada.'}
+                  {item.descricao_problema || '🔇'}
                 </p>
               </article>
             ))}
