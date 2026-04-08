@@ -4,9 +4,12 @@
 - -- salvar a pergunta/dúvida?
 
 - O tempo do atendimento ativo tá aparecendo no admin, mas não no painel. O tempo precisa ser regressivo, ao chegar a 0 avisar com borda vermelha piscando no timer e efeito pulse também
-- criar o menu de config no admin, pra configurar o tempo de atendimento
+- criar o menu de config no admin, pra configurar o tempo de atendimento e se quando sessão ativa mostra somente s turma da vez ou todas
 - Botão de "ajudei" na fila
 - recuperação de senha
 - limitar campo de pergunta a 300 caracteres
 - no chamado sem texto de pergunta, trocar o "Sem descrição informada." pelo emoji 🤫 ou 🙊
 - perfil do usuário, pra editar suas infos e talvez até escolher um hex pra cor do seu nome?
+- aparência de terminal? kkkkk paleta do git bash
+- sons
+- ao encerrar uma sessão que tem chamados abertos, fechar eles com 'ficou no vácuo'
