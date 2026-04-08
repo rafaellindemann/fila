@@ -388,7 +388,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div display="flex" gap="0.25rem">
+        <div className="topbar-brand">
           <h1>filaDoRafa.vercel.app</h1>
 
 

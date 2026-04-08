@@ -13,3 +13,5 @@
 - aparência de terminal? kkkkk paleta do git bash
 - sons
 - ao encerrar uma sessão que tem chamados abertos, fechar eles com 'ficou no vácuo'
+- deslogar no unmount?
+

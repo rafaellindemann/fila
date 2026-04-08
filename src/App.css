@@ -248,6 +248,12 @@ textarea {
   gap: 10px;
 }
 
+.topbar-brand {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
 .muted {
   color: var(--text-faint);
 }
