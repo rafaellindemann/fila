@@ -10,3 +10,4 @@
 - limitar campo de pergunta a 300 caracteres
 - no chamado sem texto de pergunta, trocar o "Sem descrição informada." pelo emoji 🤫 ou 🙊
 - perfil do usuário, pra editar suas infos e talvez até escolher um hex pra cor do seu nome?
+- aparência de terminal? kkkkk
