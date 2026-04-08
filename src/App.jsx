@@ -127,7 +127,6 @@ export default function App() {
         return
       }
 
-      // Em modo de recuperação, não entra no app normal.
       if (isRecoveryUrl() || passwordRecoveryMode) {
         setPerfilChecked(true)
         return
@@ -432,6 +431,7 @@ export default function App() {
 
         <main className="main-grid">
           <CadastroPerfil
+            sessaoAtiva={sessaoAtiva}
             onDone={async () => {
               await carregarPerfilUsuario({ silent: false, fallbackToNull: true })
             }}

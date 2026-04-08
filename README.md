@@ -10,6 +10,7 @@
 - deslogar no unmount?
 - dashboard de admin
 - mensagem de explicação e confirmação no registrar ajuda
+- visualizar/confirmar senha no cadastro
 
 
 - --limitar campo de pergunta a 300 caracteres

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { criarPerfil } from '../services/usuarios'
 import { supabase } from '../lib/supabase'
 
-export default function CadastroPerfil({ onDone }) {
+export default function CadastroPerfil({ onDone, sessaoAtiva }) {
   const [nome, setNome] = useState('')
   const [matricula, setMatricula] = useState('')
   const [turmas, setTurmas] = useState([])
@@ -16,6 +16,15 @@ export default function CadastroPerfil({ onDone }) {
   useEffect(() => {
     carregarTurmas()
   }, [])
+
+  useEffect(() => {
+    if (!sessaoAtiva?.turma?.id) return
+
+    setTurmaId((prev) => {
+      if (prev) return prev
+      return String(sessaoAtiva.turma.id)
+    })
+  }, [sessaoAtiva])
 
   async function carregarTurmas() {
     try {
@@ -39,51 +48,73 @@ export default function CadastroPerfil({ onDone }) {
     }
   }
 
-async function handleSubmit(e) {
-  e.preventDefault()
-  setErro('')
+  function handleTurmaChange(e) {
+    const novoValor = e.target.value
 
-  if (!nome.trim()) {
-    setErro('Informe o nome completo.')
-    return
-  }
+    if (
+      sessaoAtiva?.turma?.id &&
+      String(novoValor) !== String(sessaoAtiva.turma.id)
+    ) {
+      const nomeSessao =
+        sessaoAtiva.turma?.apelido || sessaoAtiva.turma?.nome || 'turma da sessão'
 
-  if (!matricula.trim()) {
-    setErro('Informe a matrícula.')
-    return
-  }
+      const confirmou = window.confirm(
+        `A sessão ativa no momento é da turma "${nomeSessao}". Deseja mesmo selecionar uma turma diferente?`
+      )
 
-  if (!turmaId) {
-    setErro('Selecione a turma.')
-    return
-  }
-
-  try {
-    setSaving(true)
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user?.id) {
-      throw new Error('Usuário autenticado não encontrado.')
+      if (!confirmou) {
+        return
+      }
     }
 
-    await criarPerfil({
-      id: user.id,
-      nome: nome.trim(),
-      matricula: matricula.trim(),
-      turma_id: turmaId,
-    })
-
-    await onDone?.()
-  } catch (err) {
-    console.error('Erro ao salvar perfil:', err)
-    setErro(err.message || 'Não foi possível salvar o perfil.')
-  } finally {
-    setSaving(false)
+    setTurmaId(novoValor)
   }
-}
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setErro('')
+
+    if (!nome.trim()) {
+      setErro('Informe o nome completo.')
+      return
+    }
+
+    if (!matricula.trim()) {
+      setErro('Informe a matrícula.')
+      return
+    }
+
+    if (!turmaId) {
+      setErro('Selecione a turma.')
+      return
+    }
+
+    try {
+      setSaving(true)
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user?.id) {
+        throw new Error('Usuário autenticado não encontrado.')
+      }
+
+      await criarPerfil({
+        id: user.id,
+        nome: nome.trim(),
+        matricula: matricula.trim(),
+        turma_id: turmaId,
+      })
+
+      await onDone?.()
+    } catch (err) {
+      console.error('Erro ao salvar perfil:', err)
+      setErro(err.message || 'Não foi possível salvar o perfil.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="card auth-card">
@@ -117,7 +148,7 @@ async function handleSubmit(e) {
           Turma
           <select
             value={turmaId}
-            onChange={(e) => setTurmaId(e.target.value)}
+            onChange={handleTurmaChange}
             required
             disabled={loadingTurmas}
           >
@@ -132,6 +163,13 @@ async function handleSubmit(e) {
             ))}
           </select>
         </label>
+
+        {sessaoAtiva?.turma?.id && (
+          <p className="muted small">
+            Sugestão automática: turma da sessão ativa (
+            {sessaoAtiva.turma?.apelido || sessaoAtiva.turma?.nome})
+          </p>
+        )}
 
         {erroTurmas && <p className="error">{erroTurmas}</p>}
         {erro && <p className="error">{erro}</p>}
