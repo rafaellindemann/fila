@@ -391,17 +391,18 @@ export default function App() {
         <div display="flex" gap="0.25rem">
           <h1>filaDoRafa.vercel.app</h1>
 
-          <p className="muted">
-            {sessaoAtiva
-              ? `Sessão ativa: ${sessaoAtiva.turma?.apelido || sessaoAtiva.turma?.nome}${sessaoAtiva.titulo ? ` — ${sessaoAtiva.titulo}` : ''}`
-              : 'Nenhuma sessão ativa no momento'}
-          </p>
+
 
           {/* <p className="muted">
             Logado como <strong>{usuario.nome_completo}</strong>
             {isAdmin ? ' (admin)' : ''}
           </p> */}
         </div>
+        <p className="muted">
+          {sessaoAtiva
+            ? `Sessão ativa: ${sessaoAtiva.turma?.apelido || sessaoAtiva.turma?.nome}${sessaoAtiva.titulo ? ` — ${sessaoAtiva.titulo}` : ''}`
+            : 'Nenhuma sessão ativa no momento'}
+        </p>
 
         <nav className="tabs">
           <button

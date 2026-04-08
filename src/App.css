@@ -249,7 +249,7 @@ textarea {
 }
 
 .muted {
-  color: var(--text-soft);
+  color: var(--text-faint);
 }
 
 .small {
