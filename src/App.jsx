@@ -24,6 +24,17 @@ function timeoutPromise(ms, message) {
   })
 }
 
+function isRecoveryUrl() {
+  const hash = (window.location.hash || '').toLowerCase()
+  const search = (window.location.search || '').toLowerCase()
+  const full = `${search}${hash}`
+
+  return (
+    full.includes('type=recovery') ||
+    (full.includes('access_token') && full.includes('refresh_token'))
+  )
+}
+
 export default function App() {
   const [fila, setFila] = useState([])
   const [sessoes, setSessoes] = useState([])
@@ -38,6 +49,7 @@ export default function App() {
   const [aba, setAba] = useState('publico')
   const [loadingMsg, setLoadingMsg] = useState('Carregando autenticação...')
   const [resettingSession, setResettingSession] = useState(false)
+  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(isRecoveryUrl())
 
   const authBootstrapRef = useRef(false)
 
@@ -115,6 +127,12 @@ export default function App() {
         return
       }
 
+      // Em modo de recuperação, não entra no app normal.
+      if (isRecoveryUrl() || passwordRecoveryMode) {
+        setPerfilChecked(true)
+        return
+      }
+
       await carregarPerfilUsuario({ silent: false, fallbackToNull: true })
     } catch (err) {
       console.error('Erro ao carregar autenticação:', err)
@@ -185,6 +203,7 @@ export default function App() {
       setPerfilChecked(true)
       setAuthLoading(false)
       setAba('publico')
+      setPasswordRecoveryMode(false)
 
       window.location.replace(window.location.pathname)
     } catch (err) {
@@ -209,15 +228,27 @@ export default function App() {
 
       setSession(sessao)
 
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecoveryMode(true)
+        setPerfilChecked(true)
+        setAuthLoading(false)
+        return
+      }
+
       if (!sessao?.user) {
         setUsuario(null)
         setPerfilChecked(true)
         setAba('publico')
+        setPasswordRecoveryMode(false)
         return
       }
 
-      // Em revalidações de sessão/retorno de aba, não derruba a UI para loading global.
-      // Só faz refresh silencioso do perfil.
+      if (isRecoveryUrl() || passwordRecoveryMode) {
+        setPerfilChecked(true)
+        setAuthLoading(false)
+        return
+      }
+
       if (usuario) {
         await carregarPerfilUsuario({ silent: true, fallbackToNull: false })
       } else {
@@ -228,7 +259,7 @@ export default function App() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [usuario])
+  }, [usuario, passwordRecoveryMode])
 
   useEffect(() => {
     let ativo = true
@@ -292,6 +323,7 @@ export default function App() {
       setUsuario(null)
       setPerfilChecked(true)
       setAba('publico')
+      setPasswordRecoveryMode(false)
     } catch (err) {
       console.error('Erro ao sair:', err)
     }
@@ -315,6 +347,30 @@ export default function App() {
             </button>
           </div>
         </div>
+      </div>
+    )
+  }
+
+  if (passwordRecoveryMode) {
+    return (
+      <div className="app-shell">
+        <header className="topbar">
+          <div>
+            <h1>filaDoRafa.vercel.app</h1>
+            <p className="muted">Defina sua nova senha para continuar.</p>
+          </div>
+        </header>
+
+        <main className="main-grid">
+          <AuthForm
+            initialMode="redefinir"
+            onPasswordResetComplete={async () => {
+              setPasswordRecoveryMode(false)
+              window.history.replaceState({}, document.title, window.location.pathname)
+              await handleLogout()
+            }}
+          />
+        </main>
       </div>
     )
   }
@@ -390,14 +446,8 @@ export default function App() {
       <header className="topbar">
         <div className="topbar-brand">
           <h1>filaDoRafa.vercel.app</h1>
-
-
-
-          {/* <p className="muted">
-            Logado como <strong>{usuario.nome_completo}</strong>
-            {isAdmin ? ' (admin)' : ''}
-          </p> */}
         </div>
+
         <p className="muted">
           {sessaoAtiva
             ? `Sessão ativa: ${sessaoAtiva.turma?.apelido || sessaoAtiva.turma?.nome}${sessaoAtiva.titulo ? ` — ${sessaoAtiva.titulo}` : ''}`

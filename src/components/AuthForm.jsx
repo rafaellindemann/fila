@@ -11,8 +11,11 @@ function getBaseUrl() {
   return window.location.origin
 }
 
-export default function AuthForm() {
-  const [modo, setModo] = useState('login') // login | cadastro | recuperar | redefinir
+export default function AuthForm({
+  initialMode = 'login',
+  onPasswordResetComplete,
+}) {
+  const [modo, setModo] = useState(initialMode)
 
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -30,14 +33,17 @@ export default function AuthForm() {
   }, [modo])
 
   useEffect(() => {
+    setModo(initialMode)
+  }, [initialMode])
+
+  useEffect(() => {
     const hash = window.location.hash || ''
     const search = window.location.search || ''
     const fullUrl = `${search}${hash}`.toLowerCase()
 
     if (
       fullUrl.includes('type=recovery') ||
-      fullUrl.includes('access_token') ||
-      fullUrl.includes('refresh_token')
+      (fullUrl.includes('access_token') && fullUrl.includes('refresh_token'))
     ) {
       setModo('redefinir')
       setErro('')
@@ -145,8 +151,14 @@ export default function AuthForm() {
 
       window.history.replaceState({}, document.title, window.location.pathname)
 
-      setMsg('Senha alterada com sucesso. Agora você já pode entrar normalmente.')
-      setModo('login')
+      setMsg('Senha alterada com sucesso.')
+
+      if (onPasswordResetComplete) {
+        await onPasswordResetComplete()
+      } else {
+        setModo('login')
+      }
+
       setSenha('')
       setConfirmarSenha('')
     } catch (err) {
