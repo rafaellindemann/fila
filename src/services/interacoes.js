@@ -4,19 +4,21 @@ import { lerChamadoLocal, limparChamadoLocal } from './chamados'
 export async function registrarInteracao({
   chamado_id,
   tipo_resultado,
-  resolvido_por_aluno_id = null,
+  resolvido_por_usuario_id = null,
   duracao_atendimento_segundos = null,
   comentario = null,
 }) {
   const { data, error } = await supabase
     .from('fila_interacoes')
-    .insert([{
-      chamado_id,
-      tipo_resultado,
-      resolvido_por_aluno_id,
-      duracao_atendimento_segundos,
-      comentario,
-    }])
+    .insert([
+      {
+        chamado_id,
+        tipo_resultado,
+        resolvido_por_usuario_id,
+        duracao_atendimento_segundos,
+        comentario,
+      },
+    ])
     .select()
     .single()
 
@@ -24,9 +26,11 @@ export async function registrarInteracao({
   return data
 }
 
-export async function registrarAjudaDoColega({ resolvido_por_aluno_id }) {
+export async function registrarAjudaDoColega({ resolvido_por_usuario_id }) {
   const meuChamado = lerChamadoLocal()
-  if (!meuChamado) throw new Error('Nenhum chamado ativo encontrado neste dispositivo.')
+  if (!meuChamado) {
+    throw new Error('Nenhum chamado ativo encontrado neste dispositivo.')
+  }
 
   const { data: chamado, error: erroChamado } = await supabase
     .from('fila_chamados')
@@ -44,11 +48,13 @@ export async function registrarAjudaDoColega({ resolvido_por_aluno_id }) {
 
   const { data, error } = await supabase
     .from('fila_interacoes')
-    .insert([{
-      chamado_id: chamado.id,
-      tipo_resultado: 'ajudado_colega',
-      resolvido_por_aluno_id,
-    }])
+    .insert([
+      {
+        chamado_id: chamado.id,
+        tipo_resultado: 'ajudado_colega',
+        resolvido_por_usuario_id,
+      },
+    ])
     .select()
     .single()
 
@@ -60,7 +66,9 @@ export async function registrarAjudaDoColega({ resolvido_por_aluno_id }) {
 
 export async function registrarResolvidoSozinho() {
   const meuChamado = lerChamadoLocal()
-  if (!meuChamado) throw new Error('Nenhum chamado ativo encontrado neste dispositivo.')
+  if (!meuChamado) {
+    throw new Error('Nenhum chamado ativo encontrado neste dispositivo.')
+  }
 
   const { data: chamado, error: erroChamado } = await supabase
     .from('fila_chamados')
@@ -78,10 +86,12 @@ export async function registrarResolvidoSozinho() {
 
   const { data, error } = await supabase
     .from('fila_interacoes')
-    .insert([{
-      chamado_id: chamado.id,
-      tipo_resultado: 'resolveu_sozinho',
-    }])
+    .insert([
+      {
+        chamado_id: chamado.id,
+        tipo_resultado: 'resolveu_sozinho',
+      },
+    ])
     .select()
     .single()
 

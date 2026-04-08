@@ -13,6 +13,17 @@ import { buscarMeuUsuario } from './services/usuarios'
 import { getSession, onAuthStateChange, signOut } from './services/auth'
 import { supabase } from './lib/supabase'
 
+const PERFIL_TIMEOUT_MS = 5000
+const AUTH_TIMEOUT_MS = 8000
+
+function timeoutPromise(ms, message) {
+  return new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(message))
+    }, ms)
+  })
+}
+
 export default function App() {
   const [fila, setFila] = useState([])
   const [sessoes, setSessoes] = useState([])
@@ -49,21 +60,39 @@ export default function App() {
     }
   }
 
-  async function carregarPerfilUsuario() {
-    try {
-      setPerfilChecked(false)
-      setLoadingMsg('Carregando perfil do usuário...')
+  async function buscarPerfilComTimeout() {
+    return Promise.race([
+      buscarMeuUsuario(),
+      timeoutPromise(PERFIL_TIMEOUT_MS, 'Tempo esgotado ao carregar perfil.'),
+    ])
+  }
 
-      const meuUsuario = await buscarMeuUsuario()
+  async function carregarPerfilUsuario({
+    silent = false,
+    fallbackToNull = true,
+  } = {}) {
+    try {
+      if (!silent) {
+        setPerfilChecked(false)
+        setLoadingMsg('Carregando perfil do usuário...')
+      }
+
+      const meuUsuario = await buscarPerfilComTimeout()
       setUsuario(meuUsuario || null)
 
       return meuUsuario || null
     } catch (err) {
       console.error('Erro ao buscar perfil do usuário:', err)
-      setUsuario(null)
+
+      if (fallbackToNull) {
+        setUsuario(null)
+      }
+
       return null
     } finally {
-      setPerfilChecked(true)
+      if (!silent) {
+        setPerfilChecked(true)
+      }
     }
   }
 
@@ -73,7 +102,11 @@ export default function App() {
       setPerfilChecked(false)
       setLoadingMsg('Carregando autenticação...')
 
-      const sessao = await getSession()
+      const sessao = await Promise.race([
+        getSession(),
+        timeoutPromise(AUTH_TIMEOUT_MS, 'Tempo esgotado ao carregar autenticação.'),
+      ])
+
       setSession(sessao)
 
       if (!sessao?.user) {
@@ -82,7 +115,7 @@ export default function App() {
         return
       }
 
-      await carregarPerfilUsuario()
+      await carregarPerfilUsuario({ silent: false, fallbackToNull: true })
     } catch (err) {
       console.error('Erro ao carregar autenticação:', err)
       setSession(null)
@@ -95,47 +128,57 @@ export default function App() {
   }
 
   function limparStoragesDoSupabase() {
-    const prefixes = ['sb-', 'supabase']
-    const storageKeys = []
-
+    const localKeys = []
     for (let i = 0; i < localStorage.length; i += 1) {
       const key = localStorage.key(i)
       if (!key) continue
-
-      const lowerKey = key.toLowerCase()
-      if (prefixes.some((prefix) => lowerKey.includes(prefix))) {
-        storageKeys.push(key)
-      }
+      localKeys.push(key)
     }
 
-    storageKeys.forEach((key) => localStorage.removeItem(key))
+    localKeys.forEach((key) => {
+      const lower = key.toLowerCase()
+      if (
+        lower.includes('supabase') ||
+        lower.includes('sb-') ||
+        lower.includes('auth-token') ||
+        lower.includes('persist-session')
+      ) {
+        localStorage.removeItem(key)
+      }
+    })
 
-    const sessionStorageKeys = []
+    const sessionKeys = []
     for (let i = 0; i < sessionStorage.length; i += 1) {
       const key = sessionStorage.key(i)
       if (!key) continue
-
-      const lowerKey = key.toLowerCase()
-      if (prefixes.some((prefix) => lowerKey.includes(prefix))) {
-        sessionStorageKeys.push(key)
-      }
+      sessionKeys.push(key)
     }
 
-    sessionStorageKeys.forEach((key) => sessionStorage.removeItem(key))
+    sessionKeys.forEach((key) => {
+      const lower = key.toLowerCase()
+      if (
+        lower.includes('supabase') ||
+        lower.includes('sb-') ||
+        lower.includes('auth-token') ||
+        lower.includes('persist-session')
+      ) {
+        sessionStorage.removeItem(key)
+      }
+    })
   }
 
   async function handleResetSessao() {
     try {
       setResettingSession(true)
 
+      limparChamadoLocal()
+      limparStoragesDoSupabase()
+
       try {
         await signOut()
       } catch (err) {
-        console.warn('Falha ao encerrar sessão remotamente, limpando sessão local.', err)
+        console.warn('Falha ao encerrar sessão remotamente:', err)
       }
-
-      limparChamadoLocal()
-      limparStoragesDoSupabase()
 
       setSession(null)
       setUsuario(null)
@@ -143,10 +186,9 @@ export default function App() {
       setAuthLoading(false)
       setAba('publico')
 
-      window.location.reload()
+      window.location.replace(window.location.pathname)
     } catch (err) {
       console.error('Erro ao resetar sessão:', err)
-    } finally {
       setResettingSession(false)
     }
   }
@@ -155,27 +197,8 @@ export default function App() {
     if (authBootstrapRef.current) return
     authBootstrapRef.current = true
 
-    let ativo = true
-
-    const timeoutId = setTimeout(() => {
-      if (!ativo) return
-
-      console.warn('Timeout de autenticação acionado.')
-      setLoadingMsg('A autenticação está demorando mais do que o esperado.')
-      setAuthLoading(false)
-      setPerfilChecked(true)
-    }, 8000)
-
-    bootstrapAuth().finally(() => {
-      clearTimeout(timeoutId)
-    })
-
+    bootstrapAuth()
     carregarTudo()
-
-    return () => {
-      ativo = false
-      clearTimeout(timeoutId)
-    }
   }, [])
 
   useEffect(() => {
@@ -193,13 +216,19 @@ export default function App() {
         return
       }
 
-      await carregarPerfilUsuario()
+      // Em revalidações de sessão/retorno de aba, não derruba a UI para loading global.
+      // Só faz refresh silencioso do perfil.
+      if (usuario) {
+        await carregarPerfilUsuario({ silent: true, fallbackToNull: false })
+      } else {
+        await carregarPerfilUsuario({ silent: false, fallbackToNull: true })
+      }
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [usuario])
 
   useEffect(() => {
     let ativo = true
@@ -258,6 +287,7 @@ export default function App() {
     try {
       await signOut()
       limparChamadoLocal()
+      limparStoragesDoSupabase()
       setSession(null)
       setUsuario(null)
       setPerfilChecked(true)
@@ -347,7 +377,7 @@ export default function App() {
         <main className="main-grid">
           <CadastroPerfil
             onDone={async () => {
-              await carregarPerfilUsuario()
+              await carregarPerfilUsuario({ silent: false, fallbackToNull: true })
             }}
           />
         </main>
