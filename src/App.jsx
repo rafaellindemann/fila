@@ -324,7 +324,7 @@ export default function App() {
       <div className="app-shell">
         <header className="topbar">
           <div>
-            <h1>Fila de Atendimento</h1>
+            <h1>filaDoRafa.vercel.app</h1>
             <p className="muted">Entre para usar o sistema.</p>
           </div>
         </header>
@@ -363,7 +363,7 @@ export default function App() {
       <div className="app-shell">
         <header className="topbar">
           <div>
-            <h1>Fila de Atendimento</h1>
+            <h1>filaDoRafa.vercel.app</h1>
             <p className="muted">Complete seu cadastro para continuar.</p>
           </div>
 
@@ -388,8 +388,8 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div>
-          <h1>Fila de Atendimento</h1>
+        <div display="flex" gap="0.25rem">
+          <h1>filaDoRafa.vercel.app</h1>
 
           <p className="muted">
             {sessaoAtiva
@@ -397,10 +397,10 @@ export default function App() {
               : 'Nenhuma sessão ativa no momento'}
           </p>
 
-          <p className="muted">
+          {/* <p className="muted">
             Logado como <strong>{usuario.nome_completo}</strong>
             {isAdmin ? ' (admin)' : ''}
-          </p>
+          </p> */}
         </div>
 
         <nav className="tabs">
