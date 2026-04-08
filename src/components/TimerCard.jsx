@@ -1,30 +1,44 @@
 import { useEffect, useMemo, useState } from 'react'
 
-function formatElapsedTime(totalSeconds) {
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = totalSeconds % 60
+const STORAGE_KEY = 'fila_tempo_atendimento_segundos'
+const DEFAULT_DURATION_SECONDS = 120
 
-  if (hours > 0) {
-    return [
-      String(hours).padStart(2, '0'),
-      String(minutes).padStart(2, '0'),
-      String(seconds).padStart(2, '0'),
-    ].join(':')
+function getStoredDurationSeconds() {
+  const raw = localStorage.getItem(STORAGE_KEY)
+  const parsed = Number(raw)
+
+  if (!raw || Number.isNaN(parsed) || parsed <= 0) {
+    return DEFAULT_DURATION_SECONDS
   }
 
-  return [
-    String(minutes).padStart(2, '0'),
-    String(seconds).padStart(2, '0'),
-  ].join(':')
+  return parsed
+}
+
+function formatClock(totalSeconds) {
+  const safeSeconds = Math.max(0, totalSeconds)
+  const minutes = Math.floor(safeSeconds / 60)
+  const seconds = safeSeconds % 60
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
 export default function TimerCard({
   active = false,
   startedAt = null,
   compact = false,
+  durationSeconds,
 }) {
   const [now, setNow] = useState(Date.now())
+  const [storedDuration, setStoredDuration] = useState(getStoredDurationSeconds())
+
+  useEffect(() => {
+    function syncDuration() {
+      setStoredDuration(getStoredDurationSeconds())
+    }
+
+    window.addEventListener('storage', syncDuration)
+    return () => window.removeEventListener('storage', syncDuration)
+  }, [])
 
   useEffect(() => {
     if (!active || !startedAt) return
@@ -36,6 +50,8 @@ export default function TimerCard({
     return () => clearInterval(id)
   }, [active, startedAt])
 
+  const effectiveDuration = durationSeconds || storedDuration || DEFAULT_DURATION_SECONDS
+
   const elapsedSeconds = useMemo(() => {
     if (!active || !startedAt) return 0
 
@@ -45,7 +61,13 @@ export default function TimerCard({
     return Math.max(0, Math.floor((now - startedMs) / 1000))
   }, [active, startedAt, now])
 
-  const display = formatElapsedTime(elapsedSeconds)
+  const remainingSeconds = Math.max(0, effectiveDuration - elapsedSeconds)
+  const expired = active && startedAt && elapsedSeconds >= effectiveDuration
+  const display = formatClock(remainingSeconds)
+
+  const className = compact
+    ? `timer-inline ${expired ? 'alert pulse' : ''}`.trim()
+    : `card timer-card ${expired ? 'alert pulse' : ''}`.trim()
 
   if (!active || !startedAt) {
     return (
@@ -63,11 +85,11 @@ export default function TimerCard({
   }
 
   if (compact) {
-    return <div className="timer-inline">{display}</div>
+    return <div className={className}>{display}</div>
   }
 
   return (
-    <div className="card timer-card">
+    <div className={className}>
       <h3>Tempo de atendimento</h3>
       <div className="big-timer">{display}</div>
     </div>

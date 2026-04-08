@@ -635,3 +635,57 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+.field-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -6px;
+}
+
+.atendimento-settings-card {
+  display: grid;
+  gap: 14px;
+}
+
+.tempo-config-row {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.tempo-config-label {
+  display: grid;
+  gap: 8px;
+  min-width: 140px;
+  color: var(--text-soft);
+}
+
+.timer-inline.alert,
+.timer-card.alert {
+  border-color: var(--danger);
+  color: var(--danger);
+  box-shadow: 0 0 0 1px rgba(223, 110, 110, 0.15), 0 0 18px rgba(223, 110, 110, 0.22);
+}
+
+.timer-inline.pulse,
+.timer-card.pulse {
+  animation: timer-alert-pulse 1s infinite;
+}
+
+@keyframes timer-alert-pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(223, 110, 110, 0.32);
+  }
+
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 8px rgba(223, 110, 110, 0.06);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(223, 110, 110, 0);
+  }
+}

@@ -9,10 +9,31 @@ import {
 import { registrarInteracao } from '../services/interacoes'
 import TimerCard from './TimerCard'
 
+const STORAGE_KEY = 'fila_tempo_atendimento_segundos'
+const DEFAULT_DURATION_SECONDS = 120
+
+function getStoredDurationSeconds() {
+  const raw = localStorage.getItem(STORAGE_KEY)
+  const parsed = Number(raw)
+
+  if (!raw || Number.isNaN(parsed) || parsed <= 0) {
+    return DEFAULT_DURATION_SECONDS
+  }
+
+  return parsed
+}
+
 export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
   const [turmas, setTurmas] = useState([])
   const [turmaId, setTurmaId] = useState('')
   const [titulo, setTitulo] = useState('')
+
+  const [tempoConfigMinutos, setTempoConfigMinutos] = useState(() =>
+    String(Math.round(getStoredDurationSeconds() / 60))
+  )
+  const [tempoAtendimentoSegundos, setTempoAtendimentoSegundos] = useState(() =>
+    getStoredDurationSeconds()
+  )
 
   useEffect(() => {
     carregarTurmas()
@@ -98,6 +119,18 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
     onRefresh()
   }
 
+  function salvarTempoAtendimento() {
+    const minutos = Number(tempoConfigMinutos)
+
+    if (Number.isNaN(minutos) || minutos <= 0) {
+      return
+    }
+
+    const segundos = Math.round(minutos * 60)
+    localStorage.setItem(STORAGE_KEY, String(segundos))
+    setTempoAtendimentoSegundos(segundos)
+  }
+
   if (!sessaoAtiva) {
     return (
       <div className="admin-stack">
@@ -151,6 +184,30 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
         </button>
       </div>
 
+      <div className="card atendimento-settings-card">
+        <div className="section-header">
+          <h2>Tempo padrão de atendimento</h2>
+          <span className="badge">{Math.round(tempoAtendimentoSegundos / 60)} min</span>
+        </div>
+
+        <div className="tempo-config-row">
+          <label className="tempo-config-label">
+            Minutos
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={tempoConfigMinutos}
+              onChange={(e) => setTempoConfigMinutos(e.target.value)}
+            />
+          </label>
+
+          <button type="button" onClick={salvarTempoAtendimento}>
+            Salvar tempo
+          </button>
+        </div>
+      </div>
+
       <div className="admin-main-grid">
         <div className="card atendimento-card">
           <div className="section-header">
@@ -158,6 +215,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
             <TimerCard
               active={!!emAtendimento}
               startedAt={emAtendimento?.iniciado_atendimento_em || null}
+              durationSeconds={tempoAtendimentoSegundos}
               compact
             />
           </div>
@@ -169,7 +227,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
               </div>
 
               <p className="atendimento-problema destaque-pergunta">
-                {emAtendimento.descricao_problema || '🤫'}
+                {emAtendimento.descricao_problema || 'Sem descrição informada.'}
               </p>
 
               <div className="admin-actions">
@@ -209,7 +267,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
                   <div className="queue-main">
                     <strong>{item.nome_completo}</strong>
                     <p className="queue-problema-small destaque-pergunta">
-                      {item.descricao_problema || '🙊'}
+                      {item.descricao_problema || 'Sem descrição informada.'}
                     </p>
                   </div>
 

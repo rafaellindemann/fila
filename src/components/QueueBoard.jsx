@@ -1,3 +1,5 @@
+import TimerCard from './TimerCard'
+
 export default function QueueBoard({ fila }) {
   const emAtendimento = fila.find((item) => item.status === 'em_atendimento')
   const aguardando = fila.filter((item) => item.status === 'aguardando')
@@ -8,13 +10,17 @@ export default function QueueBoard({ fila }) {
         <div className="card public-now-serving">
           <div className="public-card-top">
             <span className="badge badge-serving">Em atendimento</span>
-            <span className="public-card-order">Agora</span>
+            <TimerCard
+              active
+              startedAt={emAtendimento.iniciado_atendimento_em}
+              compact
+            />
           </div>
 
           <h2>{emAtendimento.nome_completo}</h2>
 
           <p className="public-card-question destaque-pergunta">
-            {emAtendimento.descricao_problema || '🙊'}
+            {emAtendimento.descricao_problema || 'Sem descrição informada.'}
           </p>
         </div>
       )}
@@ -37,7 +43,7 @@ export default function QueueBoard({ fila }) {
                 </div>
 
                 <p className="queue-public-question destaque-pergunta">
-                  {item.descricao_problema || '🙊'}
+                  {item.descricao_problema || 'Sem descrição informada.'}
                 </p>
               </article>
             ))}

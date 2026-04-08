@@ -11,6 +11,8 @@ import {
 } from '../services/interacoes'
 import { listarUsuariosDaTurma } from '../services/usuarios'
 
+const MAX_DESCRICAO = 300
+
 export default function StudentForm({ onRefresh, usuario }) {
   const [sessoes, setSessoes] = useState([])
   const [meuChamado, setMeuChamado] = useState(null)
@@ -221,11 +223,18 @@ export default function StudentForm({ onRefresh, usuario }) {
               <textarea
                 rows="5"
                 value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
+                onChange={(e) => setDescricao(e.target.value.slice(0, MAX_DESCRICAO))}
+                maxLength={MAX_DESCRICAO}
                 disabled={!!meuChamado || carregando || loading}
                 placeholder="Ex.: erro no fetch, dúvida sobre map/filter, problema com useEffect..."
               />
             </label>
+
+            <div className="field-footer">
+              <span className="muted small">
+                {descricao.length}/{MAX_DESCRICAO} caracteres
+              </span>
+            </div>
 
             {msg && <p className="success">{msg}</p>}
             {erro && <p className="error">{erro}</p>}
@@ -254,7 +263,7 @@ export default function StudentForm({ onRefresh, usuario }) {
           ) : (
             <div className="form">
               <div className="destaque-pergunta">
-                {meuChamado.descricao_problema || '🙊'}
+                {meuChamado.descricao_problema || 'Sem descrição informada.'}
               </div>
 
               <div className="student-action-grid">
