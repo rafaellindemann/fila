@@ -10,7 +10,7 @@ button {
   border-radius: 12px;
   padding: 0.85rem 1rem;
   background: var(--primary);
-  color: #08111f;
+  color: #111317;
   font-weight: 700;
   cursor: pointer;
   transition: 0.2s ease;
@@ -49,7 +49,7 @@ input,
 select,
 textarea {
   width: 100%;
-  background: #111521;
+  background: #101216;
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -61,7 +61,7 @@ textarea {
 }
 
 .app-shell {
-  width: min(1400px, calc(100% - 32px));
+  width: min(1500px, calc(100% - 32px));
   margin: 0 auto;
   padding: 24px 0 48px;
 }
@@ -93,7 +93,7 @@ textarea {
 
 .tabs button.active {
   background: var(--primary);
-  color: #08111f;
+  color: #111317;
 }
 
 .main-grid {
@@ -140,12 +140,17 @@ textarea {
 }
 
 .badge {
-  background: #111521;
+  background: #101216;
   border: 1px solid var(--border);
   color: var(--text-soft);
   padding: 0.4rem 0.7rem;
   border-radius: 999px;
   font-size: 0.9rem;
+}
+
+.badge-serving {
+  border-color: var(--question-border);
+  color: var(--warning);
 }
 
 .queue-list {
@@ -171,7 +176,7 @@ textarea {
   display: grid;
   place-items: center;
   border-radius: 14px;
-  background: #111521;
+  background: #101216;
   font-size: 1.3rem;
   font-weight: 800;
   color: var(--primary);
@@ -226,7 +231,7 @@ textarea {
   font-size: clamp(2.8rem, 7vw, 5rem);
   font-weight: 900;
   letter-spacing: 0.06em;
-  color: var(--primary);
+  color: var(--warning);
 }
 
 .highlight-box,
@@ -349,9 +354,16 @@ textarea {
 
 .atendimento-problema {
   margin: 0;
-  color: var(--text-soft);
   font-size: 1.05rem;
   line-height: 1.5;
+}
+
+.destaque-pergunta {
+  color: #f0ddb4;
+  background: var(--question-bg);
+  border: 1px solid var(--question-border);
+  border-radius: 14px;
+  padding: 12px 14px;
 }
 
 .empty-state {
@@ -374,7 +386,6 @@ textarea {
 
 .queue-problema-small {
   margin: 0.35rem 0 0;
-  color: var(--text-soft);
   font-size: 0.95rem;
   line-height: 1.35;
 }
@@ -386,15 +397,15 @@ textarea {
 }
 
 .timer-inline {
-  min-width: 108px;
+  min-width: 120px;
   text-align: center;
   padding: 0.55rem 0.85rem;
   border-radius: 12px;
-  background: #111521;
+  background: #101216;
   border: 1px solid var(--border);
-  font-size: 1.4rem;
+  font-size: 1.35rem;
   font-weight: 900;
-  color: var(--primary);
+  color: var(--warning);
 }
 
 .timer-inline.idle {
@@ -409,7 +420,25 @@ textarea {
 }
 
 .public-now-serving {
-  border: 1px solid var(--primary);
+  border: 1px solid var(--question-border);
+  background:
+    linear-gradient(180deg, rgba(199,154,87,0.06), transparent),
+    var(--panel);
+}
+
+.public-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.public-card-order {
+  color: var(--warning);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.9rem;
 }
 
 .public-now-serving h2 {
@@ -420,8 +449,55 @@ textarea {
 
 .public-now-serving p {
   margin: 0;
-  color: var(--text-soft);
   font-size: 1rem;
+}
+
+.queue-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.queue-public-card {
+  display: grid;
+  gap: 14px;
+  min-height: 150px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+}
+
+.queue-public-card-top {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.queue-public-pos {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #101216;
+  color: var(--primary);
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.queue-public-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.queue-public-question {
+  margin: 0;
+  line-height: 1.45;
+  font-size: 0.98rem;
 }
 
 @media (max-width: 980px) {
@@ -436,6 +512,10 @@ textarea {
   .admin-queue-item .queue-meta {
     grid-column: 1 / -1;
     justify-items: start;
+  }
+
+  .queue-cards-grid {
+    grid-template-columns: 1fr;
   }
 }
 

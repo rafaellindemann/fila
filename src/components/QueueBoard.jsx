@@ -1,5 +1,3 @@
-import { formatElapsed } from '../utils/time'
-
 export default function QueueBoard({ fila }) {
   const emAtendimento = fila.find((item) => item.status === 'em_atendimento')
   const aguardando = fila.filter((item) => item.status === 'aguardando')
@@ -8,9 +6,15 @@ export default function QueueBoard({ fila }) {
     <div className="queue-board-public">
       {emAtendimento && (
         <div className="card public-now-serving">
-          <span className="badge">Em atendimento</span>
+          <div className="public-card-top">
+            <span className="badge badge-serving">Em atendimento</span>
+            <span className="public-card-order">Agora</span>
+          </div>
+
           <h2>{emAtendimento.nome_completo}</h2>
-          <p>{emAtendimento.descricao_problema || 'Sem descrição informada.'}</p>
+          <p className="public-card-question destaque-pergunta">
+            {emAtendimento.descricao_problema || 'Sem descrição informada.'}
+          </p>
         </div>
       )}
 
@@ -20,26 +24,24 @@ export default function QueueBoard({ fila }) {
           <span className="badge">{aguardando.length} aguardando</span>
         </div>
 
-        <div className="queue-list">
-          {aguardando.length === 0 && <p className="muted">Nenhum aluno na fila.</p>}
+        {aguardando.length === 0 ? (
+          <p className="muted">Nenhum aluno na fila.</p>
+        ) : (
+          <div className="queue-cards-grid">
+            {aguardando.map((item, index) => (
+              <article className="queue-public-card" key={item.chamado_id}>
+                <div className="queue-public-card-top">
+                  <div className="queue-public-pos">{index + 1}</div>
+                  <div className="queue-public-name">{item.nome_completo}</div>
+                </div>
 
-          {aguardando.map((item, index) => (
-            <div className="queue-item" key={item.chamado_id}>
-              <div className="queue-pos">{index + 1}</div>
-
-              <div className="queue-main">
-                <strong>{item.nome_completo}</strong>
-                <p className="queue-problema-small">
+                <p className="queue-public-question destaque-pergunta">
                   {item.descricao_problema || 'Sem descrição informada.'}
                 </p>
-              </div>
-
-              <div className="queue-meta">
-                <span className="timer">{formatElapsed(item.entrou_em)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
+              </article>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -7,14 +7,12 @@ import {
   cancelarChamadoAdmin,
 } from '../services/chamados'
 import { registrarInteracao } from '../services/interacoes'
-import { formatElapsed } from '../utils/time'
 import TimerCard from './TimerCard'
 
 export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
   const [turmas, setTurmas] = useState([])
   const [turmaId, setTurmaId] = useState('')
   const [titulo, setTitulo] = useState('')
-  const [timerKey, setTimerKey] = useState(0)
 
   useEffect(() => {
     carregarTurmas()
@@ -57,7 +55,6 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
   async function chamarProximo() {
     if (!proximo) return
     await iniciarAtendimento(proximo.chamado_id)
-    setTimerKey((prev) => prev + 1)
     onRefresh()
   }
 
@@ -72,7 +69,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
     onRefresh()
   }
 
-  async function marcarVacuo() {
+  async function marcarVacuoEmAtendimento() {
     if (!emAtendimento) return
 
     await finalizarChamado(emAtendimento.chamado_id)
@@ -88,6 +85,15 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
     await registrarInteracao({
       chamado_id: chamadoId,
       tipo_resultado: 'cancelado_pelo_aluno',
+    })
+    onRefresh()
+  }
+
+  async function marcarVacuoNaFila(chamadoId) {
+    await cancelarChamadoAdmin(chamadoId)
+    await registrarInteracao({
+      chamado_id: chamadoId,
+      tipo_resultado: 'ficou_no_vacuo',
     })
     onRefresh()
   }
@@ -150,11 +156,9 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
           <div className="section-header">
             <h2>Em atendimento</h2>
             <TimerCard
-              key={timerKey}
               active={!!emAtendimento}
-              seconds={180}
+              startedAt={emAtendimento?.iniciado_atendimento_em || null}
               compact
-              onFinish={() => alert('Tempo de atendimento encerrado!')}
             />
           </div>
 
@@ -164,7 +168,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
                 {emAtendimento.nome_completo}
               </div>
 
-              <p className="atendimento-problema">
+              <p className="atendimento-problema destaque-pergunta">
                 {emAtendimento.descricao_problema || 'Sem descrição informada.'}
               </p>
 
@@ -173,7 +177,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
                   Finalizar
                 </button>
 
-                <button className="secondary" onClick={marcarVacuo}>
+                <button className="secondary" onClick={marcarVacuoEmAtendimento}>
                   Ficou no vácuo
                 </button>
               </div>
@@ -204,16 +208,21 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
 
                   <div className="queue-main">
                     <strong>{item.nome_completo}</strong>
-                    <p className="queue-problema-small">
+                    <p className="queue-problema-small destaque-pergunta">
                       {item.descricao_problema || 'Sem descrição informada.'}
                     </p>
                   </div>
 
                   <div className="queue-meta">
-                    <span className="timer">{formatElapsed(item.entrou_em)}</span>
-                    <button className="ghost" onClick={() => cancelar(item.chamado_id)}>
-                      Cancelar
-                    </button>
+                    <div className="inline-actions">
+                      <button className="ghost" onClick={() => marcarVacuoNaFila(item.chamado_id)}>
+                        Ficou no vácuo
+                      </button>
+
+                      <button className="ghost" onClick={() => cancelar(item.chamado_id)}>
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

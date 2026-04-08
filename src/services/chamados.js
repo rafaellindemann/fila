@@ -68,11 +68,25 @@ export async function entrarNaFila({ sessao_id, perfil_id, descricao_problema })
 }
 
 export async function iniciarAtendimento(chamadoId) {
+  const { data: chamadoAtual, error: erroBusca } = await supabase
+    .from('fila_chamados')
+    .select('id, entrou_em')
+    .eq('id', chamadoId)
+    .single()
+
+  if (erroBusca) throw erroBusca
+
+  const agoraIso = new Date().toISOString()
+  const entrouMs = new Date(chamadoAtual.entrou_em).getTime()
+  const agoraMs = new Date(agoraIso).getTime()
+  const tempo_espera_segundos = Math.max(0, Math.round((agoraMs - entrouMs) / 1000))
+
   const { data, error } = await supabase
     .from('fila_chamados')
     .update({
       status: 'em_atendimento',
-      iniciado_atendimento_em: new Date().toISOString(),
+      iniciado_atendimento_em: agoraIso,
+      tempo_espera_segundos,
     })
     .eq('id', chamadoId)
     .select()
