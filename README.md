@@ -1,4 +1,5 @@
 
+- opção de chamar um que não é o próximo;
 - opção para fechar atendimento com comentário
 
 - criar o menu de config no admin, pra configurar o tempo de atendimento e se quando sessão ativa mostra somente s turma da vez ou todas (acho que por enquanto podemos salvar esse valor do tempo no localstorage mesmo, pra não mecher nas tabelas só por isso)
