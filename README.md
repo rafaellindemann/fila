@@ -12,6 +12,7 @@
 - dashboard de admin
 - mensagem de explicação e confirmação no registrar ajuda
 - visualizar/confirmar senha no cadastro
+- No painel, frase aparecendo mas nome escondido (ou opção no cadastro da pergunta). Se alguém manjar, clica na pergunta e vê quem é? Ou nem vê e resolve no chat?
 
 
 - --limitar campo de pergunta a 300 caracteres
