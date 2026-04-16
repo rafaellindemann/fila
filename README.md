@@ -1,5 +1,5 @@
 
-- >>> antes do deploy, testar se o bug de perder login não voltou <<<
+- >>> antes do deploy, testar se o bug de perder login ao sair da aba não voltou <<<
 
 - -- opção de chamar um que não é o próximo;
 - opção para fechar atendimento com comentário
