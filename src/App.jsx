@@ -9,11 +9,10 @@ import CadastroPerfil from './pages/CadastroPerfil'
 
 import { listarFilaAtiva, limparChamadoLocal } from './services/chamados'
 import { listarSessoesAtivas } from './services/sessoes'
-import { buscarMeuUsuario } from './services/usuarios'
+import { buscarUsuarioPorId } from './services/usuarios'
 import { getSession, onAuthStateChange, signOut } from './services/auth'
 import { supabase } from './lib/supabase'
 
-const PERFIL_TIMEOUT_MS = 5000
 const AUTH_TIMEOUT_MS = 8000
 
 function timeoutPromise(ms, message) {
@@ -72,34 +71,26 @@ export default function App() {
     }
   }
 
-  async function buscarPerfilComTimeout() {
-    return Promise.race([
-      buscarMeuUsuario(),
-      timeoutPromise(PERFIL_TIMEOUT_MS, 'Tempo esgotado ao carregar perfil.'),
-    ])
-  }
-
-  async function carregarPerfilUsuario({
-    silent = false,
-    fallbackToNull = true,
-  } = {}) {
+  async function carregarPerfilPorSessao(sessao, { silent = false } = {}) {
     try {
       if (!silent) {
         setPerfilChecked(false)
         setLoadingMsg('Carregando perfil do usuário...')
       }
 
-      const meuUsuario = await buscarPerfilComTimeout()
+      const userId = sessao?.user?.id
+      if (!userId) {
+        setUsuario(null)
+        return null
+      }
+
+      const meuUsuario = await buscarUsuarioPorId(userId)
       setUsuario(meuUsuario || null)
 
       return meuUsuario || null
     } catch (err) {
       console.error('Erro ao buscar perfil do usuário:', err)
-
-      if (fallbackToNull) {
-        setUsuario(null)
-      }
-
+      setUsuario(null)
       return null
     } finally {
       if (!silent) {
@@ -132,7 +123,7 @@ export default function App() {
         return
       }
 
-      await carregarPerfilUsuario({ silent: false, fallbackToNull: true })
+      await carregarPerfilPorSessao(sessao, { silent: false })
     } catch (err) {
       console.error('Erro ao carregar autenticação:', err)
       setSession(null)
@@ -242,23 +233,20 @@ export default function App() {
         return
       }
 
-      if (isRecoveryUrl() || passwordRecoveryMode) {
+      if (isRecoveryUrl()) {
         setPerfilChecked(true)
         setAuthLoading(false)
         return
       }
 
-      if (usuario) {
-        await carregarPerfilUsuario({ silent: true, fallbackToNull: false })
-      } else {
-        await carregarPerfilUsuario({ silent: false, fallbackToNull: true })
-      }
+      await carregarPerfilPorSessao(sessao, { silent: !!usuario })
+      setPerfilChecked(true)
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [usuario, passwordRecoveryMode])
+  }, []) // importante: não recriar a subscription a cada mudança de estado
 
   useEffect(() => {
     let ativo = true
@@ -433,7 +421,7 @@ export default function App() {
           <CadastroPerfil
             sessaoAtiva={sessaoAtiva}
             onDone={async () => {
-              await carregarPerfilUsuario({ silent: false, fallbackToNull: true })
+              await carregarPerfilPorSessao(session, { silent: false })
             }}
           />
         </main>
@@ -450,7 +438,7 @@ export default function App() {
 
         <p className="muted">
           {sessaoAtiva
-            ? `Sessão ativa: ${sessaoAtiva.turma?.apelido || sessaoAtiva.turma?.nome}${sessaoAtiva.titulo ? ` — ${sessaoAtiva.titulo}` : ''}`
+            ? `sessao@ativa:~$ ${sessaoAtiva.turma?.apelido || sessaoAtiva.turma?.nome}${sessaoAtiva.titulo ? ` — ${sessaoAtiva.titulo}` : ''}`
             : 'Nenhuma sessão ativa no momento'}
         </p>
 

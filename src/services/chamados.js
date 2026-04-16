@@ -182,3 +182,30 @@ export async function buscarMeuChamado() {
 
   return data
 }
+
+
+export async function chamarAgora(chamadoId, sessaoId) {
+  // 1. encerra quem estiver em atendimento
+  await supabase
+    .from('fila_chamados')
+    .update({
+      status: 'aguardando',
+      iniciado_atendimento_em: null,
+    })
+    .eq('sessao_id', sessaoId)
+    .eq('status', 'em_atendimento')
+
+  // 2. chama o novo
+  const { data, error } = await supabase
+    .from('fila_chamados')
+    .update({
+      status: 'em_atendimento',
+      iniciado_atendimento_em: new Date().toISOString(),
+    })
+    .eq('id', chamadoId)
+    .select()
+
+  if (error) throw error
+
+  return data
+}
