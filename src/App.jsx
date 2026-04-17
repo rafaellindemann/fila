@@ -239,14 +239,16 @@ export default function App() {
         return
       }
 
-      await carregarPerfilPorSessao(sessao, { silent: !!usuario })
+      // Revalidação de sessão / volta da aba:
+      // sempre silencioso para não derrubar a UI.
+      await carregarPerfilPorSessao(sessao, { silent: true })
       setPerfilChecked(true)
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, []) // importante: não recriar a subscription a cada mudança de estado
+  }, [])
 
   useEffect(() => {
     let ativo = true
