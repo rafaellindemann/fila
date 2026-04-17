@@ -68,32 +68,22 @@ export default function AuthForm({
     setMsg('')
   }
 
-async function handleLogin(e) {
-  e.preventDefault()
-  limparMensagens()
-  setLoading(true)
+  async function handleLogin(e) {
+    e.preventDefault()
+    limparMensagens()
+    setLoading(true)
 
-  try {
-    await Promise.race([
-      signIn({
+    try {
+      await signIn({
         email,
         password: senha,
-      }),
-      timeoutPromise(7000, 'Tempo esgotado ao entrar.'),
-    ])
-  } catch (err) {
-    console.error('Erro no login:', err)
-
-    if ((err.message || '').includes('Tempo esgotado')) {
-      limparStoragesDoSupabase()
-      setErro('Sua sessão anterior travou. Limpamos a sessão salva. Tente entrar novamente.')
-    } else {
+      })
+    } catch (err) {
       setErro(err.message || 'Não foi possível entrar.')
+    } finally {
+      setLoading(false)
     }
-  } finally {
-    setLoading(false)
   }
-}
 
   async function handleCadastro(e) {
     e.preventDefault()
@@ -177,52 +167,6 @@ async function handleLogin(e) {
       setLoading(false)
     }
   }
-
-  function timeoutPromise(ms, message) {
-  return new Promise((_, reject) => {
-    setTimeout(() => reject(new Error(message)), ms)
-  })
-}
-
-function limparStoragesDoSupabase() {
-  const localKeys = []
-  for (let i = 0; i < localStorage.length; i += 1) {
-    const key = localStorage.key(i)
-    if (!key) continue
-    localKeys.push(key)
-  }
-
-  localKeys.forEach((key) => {
-    const lower = key.toLowerCase()
-    if (
-      lower.includes('supabase') ||
-      lower.includes('sb-') ||
-      lower.includes('auth-token') ||
-      lower.includes('persist-session')
-    ) {
-      localStorage.removeItem(key)
-    }
-  })
-
-  const sessionKeys = []
-  for (let i = 0; i < sessionStorage.length; i += 1) {
-    const key = sessionStorage.key(i)
-    if (!key) continue
-    sessionKeys.push(key)
-  }
-
-  sessionKeys.forEach((key) => {
-    const lower = key.toLowerCase()
-    if (
-      lower.includes('supabase') ||
-      lower.includes('sb-') ||
-      lower.includes('auth-token') ||
-      lower.includes('persist-session')
-    ) {
-      sessionStorage.removeItem(key)
-    }
-  })
-}
 
   return (
     <div className="auth-wrap">

@@ -11,22 +11,6 @@ export async function criarPerfil({ id, nome, matricula, turma_id }) {
   if (error) throw error
 }
 
-export async function buscarUsuarioPorId(userId) {
-  if (!userId) return null
-
-  const { data, error } = await supabase
-    .from('fila_usuarios')
-    .select(`
-      *,
-      turma:fila_turmas (*)
-    `)
-    .eq('id', userId)
-    .maybeSingle()
-
-  if (error) throw error
-  return data || null
-}
-
 export async function buscarMeuUsuario() {
   const {
     data: { user },
@@ -36,7 +20,17 @@ export async function buscarMeuUsuario() {
   if (userError) throw userError
   if (!user) return null
 
-  return buscarUsuarioPorId(user.id)
+  const { data, error } = await supabase
+    .from('fila_usuarios')
+    .select(`
+      *,
+      turma:fila_turmas (*)
+    `)
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (error) throw error
+  return data || null
 }
 
 export async function listarUsuariosDaTurma(turmaId) {

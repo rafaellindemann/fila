@@ -96,6 +96,48 @@ export async function iniciarAtendimento(chamadoId) {
   return data
 }
 
+export async function chamarAgora(chamadoId, sessaoId) {
+  const agoraIso = new Date().toISOString()
+
+  const { data: chamadoAtual, error: erroBusca } = await supabase
+    .from('fila_chamados')
+    .select('id, entrou_em')
+    .eq('id', chamadoId)
+    .single()
+
+  if (erroBusca) throw erroBusca
+
+  const entrouMs = new Date(chamadoAtual.entrou_em).getTime()
+  const agoraMs = new Date(agoraIso).getTime()
+  const tempo_espera_segundos = Math.max(0, Math.round((agoraMs - entrouMs) / 1000))
+
+  // volta qualquer atendimento atual para aguardando
+  const { error: erroReset } = await supabase
+    .from('fila_chamados')
+    .update({
+      status: 'aguardando',
+      iniciado_atendimento_em: null,
+    })
+    .eq('sessao_id', sessaoId)
+    .eq('status', 'em_atendimento')
+
+  if (erroReset) throw erroReset
+
+  const { data, error } = await supabase
+    .from('fila_chamados')
+    .update({
+      status: 'em_atendimento',
+      iniciado_atendimento_em: agoraIso,
+      tempo_espera_segundos,
+    })
+    .eq('id', chamadoId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
 export async function finalizarChamado(chamadoId) {
   const { data, error } = await supabase
     .from('fila_chamados')

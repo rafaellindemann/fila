@@ -1,356 +1,363 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import './App.css'
+// bash 3
+import { useEffect, useMemo, useRef, useState } from "react";
+import "./App.css";
 
-import QueueBoard from './components/QueueBoard'
-import StudentForm from './components/StudentForm'
-import AdminPanel from './components/AdminPanel'
-import AuthForm from './components/AuthForm'
-import CadastroPerfil from './pages/CadastroPerfil'
+import QueueBoard from "./components/QueueBoard";
+import StudentForm from "./components/StudentForm";
+import AdminPanel from "./components/AdminPanel";
+import AuthForm from "./components/AuthForm";
+import CadastroPerfil from "./pages/CadastroPerfil";
 
-import { listarFilaAtiva, limparChamadoLocal } from './services/chamados'
-import { listarSessoesAtivas } from './services/sessoes'
-import { buscarMeuUsuario } from './services/usuarios'
-import { getSession, onAuthStateChange, signOut } from './services/auth'
-import { supabase } from './lib/supabase'
+import { listarFilaAtiva, limparChamadoLocal } from "./services/chamados";
+import { listarSessoesAtivas } from "./services/sessoes";
+import { buscarUsuarioPorId } from "./services/usuarios";
+import { getSession, onAuthStateChange, signOut } from "./services/auth";
+import { supabase } from "./lib/supabase";
 
-const PERFIL_TIMEOUT_MS = 5000
-const AUTH_TIMEOUT_MS = 8000
+const AUTH_TIMEOUT_MS = 8000;
 
 function timeoutPromise(ms, message) {
   return new Promise((_, reject) => {
-    setTimeout(() => {
-      reject(new Error(message))
-    }, ms)
-  })
+    setTimeout(() => reject(new Error(message)), ms);
+  });
 }
 
 function isRecoveryUrl() {
-  const hash = (window.location.hash || '').toLowerCase()
-  const search = (window.location.search || '').toLowerCase()
-  const full = `${search}${hash}`
+  const hash = (window.location.hash || "").toLowerCase();
+  const search = (window.location.search || "").toLowerCase();
+  const full = `${search}${hash}`;
 
   return (
-    full.includes('type=recovery') ||
-    (full.includes('access_token') && full.includes('refresh_token'))
-  )
+    full.includes("type=recovery") ||
+    (full.includes("access_token") && full.includes("refresh_token"))
+  );
 }
 
 export default function App() {
-  const [fila, setFila] = useState([])
-  const [sessoes, setSessoes] = useState([])
+  const [fila, setFila] = useState([]);
+  const [sessoes, setSessoes] = useState([]);
 
-  const [session, setSession] = useState(null)
-  const [usuario, setUsuario] = useState(null)
+  const [session, setSession] = useState(null);
+  const [usuario, setUsuario] = useState(null);
 
-  const [authLoading, setAuthLoading] = useState(true)
-  const [perfilChecked, setPerfilChecked] = useState(false)
-  const [appLoading, setAppLoading] = useState(true)
+  const [appLoading, setAppLoading] = useState(true);
+  const [aba, setAba] = useState("publico");
+  const [resettingSession, setResettingSession] = useState(false);
 
-  const [aba, setAba] = useState('publico')
-  const [loadingMsg, setLoadingMsg] = useState('Carregando autenticação...')
-  const [resettingSession, setResettingSession] = useState(false)
-  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(isRecoveryUrl())
+  const [bootStatus, setBootStatus] = useState("loading");
+  // loading | anonymous | needs_profile | ready | recovery
 
-  const authBootstrapRef = useRef(false)
+  const [loadingMsg, setLoadingMsg] = useState("Carregando autenticação...");
 
-  const sessaoAtiva = useMemo(() => sessoes[0] || null, [sessoes])
-  const isAdmin = usuario?.papel === 'admin'
+  const authBootstrapRef = useRef(false);
+  const profileRequestRef = useRef(0);
+
+  const sessaoAtiva = useMemo(() => sessoes[0] || null, [sessoes]);
+  const isAdmin = usuario?.papel === "admin";
 
   async function carregarTudo() {
     try {
       const [filaData, sessoesData] = await Promise.all([
         listarFilaAtiva(),
         listarSessoesAtivas(),
-      ])
+      ]);
 
-      setFila(filaData || [])
-      setSessoes(sessoesData || [])
+      setFila(filaData || []);
+      setSessoes(sessoesData || []);
     } catch (err) {
-      console.error('Erro ao carregar dados da fila:', err)
+      console.error("Erro ao carregar dados da fila:", err);
     } finally {
-      setAppLoading(false)
+      setAppLoading(false);
     }
   }
 
-  async function buscarPerfilComTimeout() {
-    return Promise.race([
-      buscarMeuUsuario(),
-      timeoutPromise(PERFIL_TIMEOUT_MS, 'Tempo esgotado ao carregar perfil.'),
-    ])
-  }
+  async function carregarPerfilPorUserId(userId, { silent = false } = {}) {
+    const requestId = ++profileRequestRef.current;
 
-  async function carregarPerfilUsuario({
-    silent = false,
-    fallbackToNull = true,
-  } = {}) {
     try {
       if (!silent) {
-        setPerfilChecked(false)
-        setLoadingMsg('Carregando perfil do usuário...')
+        setLoadingMsg("Carregando perfil do usuário...");
       }
 
-      const meuUsuario = await buscarPerfilComTimeout()
-      setUsuario(meuUsuario || null)
+      const perfil = await buscarUsuarioPorId(userId);
 
-      return meuUsuario || null
+      // ignora resposta velha
+      if (requestId !== profileRequestRef.current) return null;
+
+      setUsuario(perfil || null);
+
+      if (perfil) {
+        setBootStatus("ready");
+      } else {
+        setBootStatus("needs_profile");
+      }
+
+      return perfil || null;
     } catch (err) {
-      console.error('Erro ao buscar perfil do usuário:', err)
+      console.error("Erro ao buscar perfil do usuário:", err);
 
-      if (fallbackToNull) {
-        setUsuario(null)
-      }
+      if (requestId !== profileRequestRef.current) return null;
 
-      return null
-    } finally {
-      if (!silent) {
-        setPerfilChecked(true)
-      }
+      // não joga para cadastro por erro transitório de leitura
+      // mantém fluxo seguro
+      setUsuario(null);
+      setBootStatus("loading");
+      return null;
     }
   }
 
   async function bootstrapAuth() {
     try {
-      setAuthLoading(true)
-      setPerfilChecked(false)
-      setLoadingMsg('Carregando autenticação...')
+      setBootStatus("loading");
+      setLoadingMsg("Carregando autenticação...");
 
       const sessao = await Promise.race([
         getSession(),
-        timeoutPromise(AUTH_TIMEOUT_MS, 'Tempo esgotado ao carregar autenticação.'),
-      ])
+        timeoutPromise(
+          AUTH_TIMEOUT_MS,
+          "Tempo esgotado ao carregar autenticação.",
+        ),
+      ]);
 
-      setSession(sessao)
+      setSession(sessao);
 
       if (!sessao?.user) {
-        setUsuario(null)
-        setPerfilChecked(true)
-        return
+        setUsuario(null);
+        setBootStatus("anonymous");
+        return;
       }
 
-      if (isRecoveryUrl() || passwordRecoveryMode) {
-        setPerfilChecked(true)
-        return
+      if (isRecoveryUrl()) {
+        setBootStatus("recovery");
+        return;
       }
 
-      await carregarPerfilUsuario({ silent: false, fallbackToNull: true })
+      await carregarPerfilPorUserId(sessao.user.id, { silent: false });
     } catch (err) {
-      console.error('Erro ao carregar autenticação:', err)
-      setSession(null)
-      setUsuario(null)
-      setPerfilChecked(true)
-    } finally {
-      setAuthLoading(false)
-      setLoadingMsg('Carregando autenticação...')
+      console.error("Erro ao carregar autenticação:", err);
+
+      // recovery automático para sessão persistida quebrada
+      limparChamadoLocal();
+      limparStoragesDoSupabase();
+
+      try {
+        await signOut();
+      } catch (logoutErr) {
+        console.warn(
+          "Falha ao limpar sessão remota durante recovery:",
+          logoutErr,
+        );
+      }
+
+      setSession(null);
+      setUsuario(null);
+      setBootStatus("anonymous");
     }
   }
 
   function limparStoragesDoSupabase() {
-    const localKeys = []
+    const localKeys = [];
     for (let i = 0; i < localStorage.length; i += 1) {
-      const key = localStorage.key(i)
-      if (!key) continue
-      localKeys.push(key)
+      const key = localStorage.key(i);
+      if (!key) continue;
+      localKeys.push(key);
     }
 
     localKeys.forEach((key) => {
-      const lower = key.toLowerCase()
+      const lower = key.toLowerCase();
       if (
-        lower.includes('supabase') ||
-        lower.includes('sb-') ||
-        lower.includes('auth-token') ||
-        lower.includes('persist-session')
+        lower.includes("supabase") ||
+        lower.includes("sb-") ||
+        lower.includes("auth-token") ||
+        lower.includes("persist-session")
       ) {
-        localStorage.removeItem(key)
+        localStorage.removeItem(key);
       }
-    })
+    });
 
-    const sessionKeys = []
+    const sessionKeys = [];
     for (let i = 0; i < sessionStorage.length; i += 1) {
-      const key = sessionStorage.key(i)
-      if (!key) continue
-      sessionKeys.push(key)
+      const key = sessionStorage.key(i);
+      if (!key) continue;
+      sessionKeys.push(key);
     }
 
     sessionKeys.forEach((key) => {
-      const lower = key.toLowerCase()
+      const lower = key.toLowerCase();
       if (
-        lower.includes('supabase') ||
-        lower.includes('sb-') ||
-        lower.includes('auth-token') ||
-        lower.includes('persist-session')
+        lower.includes("supabase") ||
+        lower.includes("sb-") ||
+        lower.includes("auth-token") ||
+        lower.includes("persist-session")
       ) {
-        sessionStorage.removeItem(key)
+        sessionStorage.removeItem(key);
       }
-    })
+    });
   }
 
   async function handleResetSessao() {
     try {
-      setResettingSession(true)
+      setResettingSession(true);
 
-      limparChamadoLocal()
-      limparStoragesDoSupabase()
+      limparChamadoLocal();
+      limparStoragesDoSupabase();
 
       try {
-        await signOut()
+        await signOut();
       } catch (err) {
-        console.warn('Falha ao encerrar sessão remotamente:', err)
+        console.warn("Falha ao encerrar sessão remotamente:", err);
       }
 
-      setSession(null)
-      setUsuario(null)
-      setPerfilChecked(true)
-      setAuthLoading(false)
-      setAba('publico')
-      setPasswordRecoveryMode(false)
+      profileRequestRef.current += 1;
+      setSession(null);
+      setUsuario(null);
+      setBootStatus("anonymous");
+      setAba("publico");
 
-      window.location.replace(window.location.pathname)
+      window.location.replace(window.location.pathname);
     } catch (err) {
-      console.error('Erro ao resetar sessão:', err)
-      setResettingSession(false)
+      console.error("Erro ao resetar sessão:", err);
+      setResettingSession(false);
     }
   }
 
   useEffect(() => {
-    if (authBootstrapRef.current) return
-    authBootstrapRef.current = true
+    if (authBootstrapRef.current) return;
+    authBootstrapRef.current = true;
 
-    bootstrapAuth()
-    carregarTudo()
-  }, [])
+    bootstrapAuth();
+    carregarTudo();
+  }, []);
 
   useEffect(() => {
     const {
       data: { subscription },
     } = onAuthStateChange(async (event, sessao) => {
-      console.log('Auth state mudou:', event, sessao)
+      console.log("Auth state mudou:", event, sessao);
 
-      setSession(sessao)
+      // evita reprocessar o bootstrap já tratado por getSession()
+      if (event === "INITIAL_SESSION") {
+        return;
+      }
 
-      if (event === 'PASSWORD_RECOVERY') {
-        setPasswordRecoveryMode(true)
-        setPerfilChecked(true)
-        setAuthLoading(false)
-        return
+      setSession(sessao);
+
+      if (event === "PASSWORD_RECOVERY") {
+        setBootStatus("recovery");
+        return;
       }
 
       if (!sessao?.user) {
-        setUsuario(null)
-        setPerfilChecked(true)
-        setAba('publico')
-        setPasswordRecoveryMode(false)
-        return
+        profileRequestRef.current += 1;
+        setUsuario(null);
+        setBootStatus("anonymous");
+        setAba("publico");
+        return;
       }
 
-      if (isRecoveryUrl() || passwordRecoveryMode) {
-        setPerfilChecked(true)
-        setAuthLoading(false)
-        return
+      if (isRecoveryUrl()) {
+        setBootStatus("recovery");
+        return;
       }
 
-      if (usuario) {
-        await carregarPerfilUsuario({ silent: true, fallbackToNull: false })
-      } else {
-        await carregarPerfilUsuario({ silent: false, fallbackToNull: true })
-      }
-    })
+      // refresh silencioso
+      await carregarPerfilPorUserId(sessao.user.id, { silent: true });
+    });
 
     return () => {
-      subscription.unsubscribe()
-    }
-  }, [usuario, passwordRecoveryMode])
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
-    let ativo = true
+    let ativo = true;
 
     const recarregar = async () => {
-      if (!ativo) return
-      await carregarTudo()
-    }
+      if (!ativo) return;
+      await carregarTudo();
+    };
 
     const channel = supabase
-      .channel('fila-realtime-global')
+      .channel("fila-realtime-global")
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'fila_chamados' },
-        recarregar
+        "postgres_changes",
+        { event: "*", schema: "public", table: "fila_chamados" },
+        recarregar,
       )
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'fila_sessoes' },
-        recarregar
+        "postgres_changes",
+        { event: "*", schema: "public", table: "fila_sessoes" },
+        recarregar,
       )
       .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'fila_interacoes' },
-        recarregar
+        "postgres_changes",
+        { event: "*", schema: "public", table: "fila_interacoes" },
+        recarregar,
       )
       .subscribe((status) => {
-        console.log('STATUS REALTIME:', status)
-      })
+        console.log("STATUS REALTIME:", status);
+      });
 
     return () => {
-      ativo = false
-      supabase.removeChannel(channel)
-    }
-  }, [])
+      ativo = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      carregarTudo()
-    }, 5000)
+      carregarTudo();
+    }, 5000);
 
-    return () => clearInterval(intervalId)
-  }, [])
+    return () => clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
-    if (isAdmin && aba !== 'publico' && aba !== 'aluno' && aba !== 'admin') {
-      setAba('publico')
+    if (!isAdmin && aba === "admin") {
+      setAba("publico");
     }
-
-    if (!isAdmin && aba === 'admin') {
-      setAba('publico')
-    }
-  }, [aba, isAdmin])
+  }, [aba, isAdmin]);
 
   async function handleLogout() {
     try {
-      await signOut()
-      limparChamadoLocal()
-      limparStoragesDoSupabase()
-      setSession(null)
-      setUsuario(null)
-      setPerfilChecked(true)
-      setAba('publico')
-      setPasswordRecoveryMode(false)
+      await signOut();
+      limparChamadoLocal();
+      limparStoragesDoSupabase();
+      profileRequestRef.current += 1;
+      setSession(null);
+      setUsuario(null);
+      setBootStatus("anonymous");
+      setAba("publico");
     } catch (err) {
-      console.error('Erro ao sair:', err)
+      console.error("Erro ao sair:", err);
     }
   }
 
-  if (authLoading) {
+  if (bootStatus === "loading") {
     return (
       <div className="app-shell">
         <div className="card">
-          <h2>Autenticação</h2>
+          <h2>Perfil</h2>
           <p>{loadingMsg}</p>
 
-          <div className="toolbar" style={{ marginTop: '1rem' }}>
+          <div className="toolbar" style={{ marginTop: "1rem" }}>
             <button
               type="button"
               className="secondary"
               onClick={handleResetSessao}
               disabled={resettingSession}
             >
-              {resettingSession ? 'Limpando sessão...' : 'Cancelar e voltar ao login'}
+              {resettingSession
+                ? "Limpando sessão..."
+                : "Cancelar e voltar ao login"}
             </button>
           </div>
         </div>
       </div>
-    )
+    );
   }
 
-  if (passwordRecoveryMode) {
+  if (bootStatus === "recovery") {
     return (
       <div className="app-shell">
         <header className="topbar">
@@ -364,17 +371,20 @@ export default function App() {
           <AuthForm
             initialMode="redefinir"
             onPasswordResetComplete={async () => {
-              setPasswordRecoveryMode(false)
-              window.history.replaceState({}, document.title, window.location.pathname)
-              await handleLogout()
+              window.history.replaceState(
+                {},
+                document.title,
+                window.location.pathname,
+              );
+              await handleLogout();
             }}
           />
         </main>
       </div>
-    )
+    );
   }
 
-  if (!session) {
+  if (bootStatus === "anonymous") {
     return (
       <div className="app-shell">
         <header className="topbar">
@@ -388,32 +398,10 @@ export default function App() {
           <AuthForm />
         </main>
       </div>
-    )
+    );
   }
 
-  if (!perfilChecked) {
-    return (
-      <div className="app-shell">
-        <div className="card">
-          <h2>Perfil</h2>
-          <p>Carregando perfil do usuário...</p>
-
-          <div className="toolbar" style={{ marginTop: '1rem' }}>
-            <button
-              type="button"
-              className="secondary"
-              onClick={handleResetSessao}
-              disabled={resettingSession}
-            >
-              {resettingSession ? 'Limpando sessão...' : 'Cancelar e voltar ao login'}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (session && !usuario) {
+  if (bootStatus === "needs_profile" && session) {
     return (
       <div className="app-shell">
         <header className="topbar">
@@ -433,12 +421,16 @@ export default function App() {
           <CadastroPerfil
             sessaoAtiva={sessaoAtiva}
             onDone={async () => {
-              await carregarPerfilUsuario({ silent: false, fallbackToNull: true })
+              if (session?.user?.id) {
+                await carregarPerfilPorUserId(session.user.id, {
+                  silent: false,
+                });
+              }
             }}
           />
         </main>
       </div>
-    )
+    );
   }
 
   return (
@@ -450,29 +442,29 @@ export default function App() {
 
         <p className="muted">
           {sessaoAtiva
-            ? `Sessão ativa: ${sessaoAtiva.turma?.apelido || sessaoAtiva.turma?.nome}${sessaoAtiva.titulo ? ` — ${sessaoAtiva.titulo}` : ''}`
-            : 'Nenhuma sessão ativa no momento'}
+            ? `sessao@ativa:~$ ${sessaoAtiva.turma?.apelido || sessaoAtiva.turma?.nome}${sessaoAtiva.titulo ? ` — ${sessaoAtiva.titulo}` : ""}`
+            : "Nenhuma sessão ativa no momento"}
         </p>
 
         <nav className="tabs">
           <button
-            className={aba === 'publico' ? 'active' : ''}
-            onClick={() => setAba('publico')}
+            className={aba === "publico" ? "active" : ""}
+            onClick={() => setAba("publico")}
           >
             Painel
           </button>
 
           <button
-            className={aba === 'aluno' ? 'active' : ''}
-            onClick={() => setAba('aluno')}
+            className={aba === "aluno" ? "active" : ""}
+            onClick={() => setAba("aluno")}
           >
             Meu chamado
           </button>
 
           {isAdmin && (
             <button
-              className={aba === 'admin' ? 'active' : ''}
-              onClick={() => setAba('admin')}
+              className={aba === "admin" ? "active" : ""}
+              onClick={() => setAba("admin")}
             >
               Admin
             </button>
@@ -491,16 +483,13 @@ export default function App() {
           </div>
         ) : (
           <>
-            {aba === 'publico' && <QueueBoard fila={fila} />}
+            {aba === "publico" && <QueueBoard fila={fila} />}
 
-            {aba === 'aluno' && (
-              <StudentForm
-                onRefresh={carregarTudo}
-                usuario={usuario}
-              />
+            {aba === "aluno" && (
+              <StudentForm onRefresh={carregarTudo} usuario={usuario} />
             )}
 
-            {aba === 'admin' && isAdmin && (
+            {aba === "admin" && isAdmin && (
               <AdminPanel
                 fila={fila}
                 sessaoAtiva={sessaoAtiva}
@@ -512,5 +501,5 @@ export default function App() {
         )}
       </main>
     </div>
-  )
+  );
 }

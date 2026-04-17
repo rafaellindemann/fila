@@ -5,6 +5,7 @@ import {
   iniciarAtendimento,
   finalizarChamado,
   cancelarChamadoAdmin,
+  chamarAgora,
 } from '../services/chamados'
 import { registrarInteracao } from '../services/interacoes'
 import TimerCard from './TimerCard'
@@ -117,6 +118,20 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
       tipo_resultado: 'ficou_no_vacuo',
     })
     onRefresh()
+  }
+
+  async function handleChamarAgora(chamado) {
+    try {
+      if (!confirm('Chamar este aluno agora e ignorar a ordem da fila?')) {
+        return
+      }
+
+      await chamarAgora(chamado.chamado_id, sessaoAtiva.id)
+      onRefresh()
+    } catch (err) {
+      console.error('Erro ao chamar agora:', err)
+      alert('Erro ao chamar aluno.')
+    }
   }
 
   function salvarTempoAtendimento() {
@@ -261,7 +276,10 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
           ) : (
             <div className="queue-list admin-queue-list">
               {aguardando.map((item, index) => (
-                <div className="queue-item admin-queue-item" key={item.chamado_id}>
+                <div
+                  className="queue-item admin-queue-item"
+                  key={item.chamado_id}
+                >
                   <div className="queue-pos">{index + 1}</div>
 
                   <div className="queue-main">
@@ -273,13 +291,28 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
 
                   <div className="queue-meta">
                     <div className="inline-actions">
-                      <button className="ghost" onClick={() => marcarVacuoNaFila(item.chamado_id)}>
+                      <button
+                        className="ghost"
+                        onClick={() => marcarVacuoNaFila(item.chamado_id)}
+                      >
                         Ficou no vácuo
                       </button>
 
-                      <button className="ghost" onClick={() => cancelar(item.chamado_id)}>
+                      <button
+                        className="ghost"
+                        onClick={() => cancelar(item.chamado_id)}
+                      >
                         Cancelar
                       </button>
+
+                      {item.status === 'aguardando' && (
+                        <button
+                          className="ghost"
+                          onClick={() => handleChamarAgora(item)}
+                        >
+                          Chamar agora
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -288,7 +321,10 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
           )}
 
           <div className="admin-footer-actions">
-            <button onClick={chamarProximo} disabled={!proximo || !!emAtendimento}>
+            <button
+              onClick={chamarProximo}
+              disabled={!proximo || !!emAtendimento}
+            >
               Chamar próximo
             </button>
           </div>

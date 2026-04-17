@@ -1,29 +1,35 @@
 :root {
-  --bg: #0b0c0f;
-  --bg-soft: #111317;
-  --panel: #17191d;
-  --panel-2: #20242a;
-  --border: #2d323a;
+  --bg: #000000;
+  --bg-soft: #0a0a0a;
+  --panel: #0f0f0f;
+  --panel-2: #151515;
+  --border: #262626;
 
-  --text: #ece9e1;
-  --text-soft: #b8b1a4;
-  --text-faint: #7f776a;
+  --text: #bfbdbb;
+  --text-soft: #97938f;
+  --text-faint: #6f6b68;
 
-  --primary: #d7d1c4;
-  --primary-2: #bdb4a1;
-  --success: #59c18e;
-  --warning: #d9a85d;
-  --danger: #df6e6e;
+  --primary: #1ca600;
+  --primary-2: #179000;
+  --success: #1ca600;
+  --warning: #c0a000;
+  --danger: #f44747;
 
-  --question-accent: #c79a57;
-  --question-bg: rgba(199, 154, 87, 0.10);
-  --question-border: rgba(199, 154, 87, 0.28);
+  --accent-purple: #ae48c6;
+  --accent-blue: #7d91ec;
+  --accent-cyan: #00eeeb;
 
-  --shadow: 0 18px 44px rgba(0, 0, 0, 0.32);
-  --radius: 18px;
+  --question-accent: #c0a000;
+  --question-bg: rgba(192, 160, 0, 0.10);
+  --question-border: rgba(192, 160, 0, 0.28);
+
+  --shadow: 0 0 0 1px rgba(28, 166, 0, 0.05), 0 16px 36px rgba(0, 0, 0, 0.42);
+  --radius: 8px;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -34,10 +40,140 @@ body,
   margin: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
-  font-family: Inter, system-ui, Arial, sans-serif;
+  font-family:
+    "JetBrains Mono",
+    "Fira Code",
+    "Cascadia Code",
+    "Consolas",
+    "Courier New",
+    monospace;
   background:
-    radial-gradient(circle at top, #191b20 0%, var(--bg) 48%),
-    var(--bg);
+    radial-gradient(circle at top, rgba(28, 166, 0, 0.045) 0%, transparent 22%),
+    radial-gradient(circle at 20% 0%, rgba(174, 72, 198, 0.035) 0%, transparent 18%),
+    linear-gradient(180deg, #080808 0%, #020202 55%, #000000 100%);
   color: var(--text);
+  letter-spacing: 0.01em;
+  line-height: 1.45;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.018) 0,
+      rgba(255, 255, 255, 0.018) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+  background-size: 100% 3px;
+  opacity: 0.05;
+  mix-blend-mode: soft-light;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at center, transparent 0%, transparent 60%, rgba(0, 0, 0, 0.22) 100%);
+  opacity: 0.9;
+}
+
+::selection {
+  background: rgba(28, 166, 0, 0.28);
+  color: #f3fff1;
+}
+
+::-moz-selection {
+  background: rgba(28, 166, 0, 0.28);
+  color: #f3fff1;
+}
+
+a {
+  color: var(--accent-blue);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-cyan);
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family:
+    "JetBrains Mono",
+    "Fira Code",
+    "Cascadia Code",
+    "Consolas",
+    "Courier New",
+    monospace;
+}
+
+pre,
+code {
+  color: var(--primary);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+:focus-visible {
+  outline: 2px solid rgba(28, 166, 0, 0.32);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1ca600 #0a0a0a;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(28, 166, 0, 0.45);
+  border-radius: 999px;
+  border: 2px solid #0a0a0a;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(28, 166, 0, 0.65);
 }
