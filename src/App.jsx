@@ -1,4 +1,4 @@
-// bash2
+// bash 3
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
@@ -10,7 +10,7 @@ import CadastroPerfil from './pages/CadastroPerfil'
 
 import { listarFilaAtiva, limparChamadoLocal } from './services/chamados'
 import { listarSessoesAtivas } from './services/sessoes'
-import { buscarMeuUsuario } from './services/usuarios'
+import { buscarUsuarioPorId } from './services/usuarios'
 import { getSession, onAuthStateChange, signOut } from './services/auth'
 import { supabase } from './lib/supabase'
 
@@ -18,9 +18,7 @@ const AUTH_TIMEOUT_MS = 8000
 
 function timeoutPromise(ms, message) {
   return new Promise((_, reject) => {
-    setTimeout(() => {
-      reject(new Error(message))
-    }, ms)
+    setTimeout(() => reject(new Error(message)), ms)
   })
 }
 
@@ -42,16 +40,17 @@ export default function App() {
   const [session, setSession] = useState(null)
   const [usuario, setUsuario] = useState(null)
 
-  const [authLoading, setAuthLoading] = useState(true)
-  const [perfilChecked, setPerfilChecked] = useState(false)
   const [appLoading, setAppLoading] = useState(true)
-
   const [aba, setAba] = useState('publico')
-  const [loadingMsg, setLoadingMsg] = useState('Carregando autenticação...')
   const [resettingSession, setResettingSession] = useState(false)
-  const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(isRecoveryUrl())
+
+  const [bootStatus, setBootStatus] = useState('loading')
+  // loading | anonymous | needs_profile | ready | recovery
+
+  const [loadingMsg, setLoadingMsg] = useState('Carregando autenticação...')
 
   const authBootstrapRef = useRef(false)
+  const profileRequestRef = useRef(0)
 
   const sessaoAtiva = useMemo(() => sessoes[0] || null, [sessoes])
   const isAdmin = usuario?.papel === 'admin'
@@ -72,31 +71,44 @@ export default function App() {
     }
   }
 
-  async function carregarPerfilUsuario({ silent = false } = {}) {
+  async function carregarPerfilPorUserId(userId, { silent = false } = {}) {
+    const requestId = ++profileRequestRef.current
+
     try {
       if (!silent) {
-        setPerfilChecked(false)
         setLoadingMsg('Carregando perfil do usuário...')
       }
 
-      const meuUsuario = await buscarMeuUsuario()
-      setUsuario(meuUsuario || null)
-      return meuUsuario || null
+      const perfil = await buscarUsuarioPorId(userId)
+
+      // ignora resposta velha
+      if (requestId !== profileRequestRef.current) return null
+
+      setUsuario(perfil || null)
+
+      if (perfil) {
+        setBootStatus('ready')
+      } else {
+        setBootStatus('needs_profile')
+      }
+
+      return perfil || null
     } catch (err) {
       console.error('Erro ao buscar perfil do usuário:', err)
+
+      if (requestId !== profileRequestRef.current) return null
+
+      // não joga para cadastro por erro transitório de leitura
+      // mantém fluxo seguro
       setUsuario(null)
+      setBootStatus('loading')
       return null
-    } finally {
-      if (!silent) {
-        setPerfilChecked(true)
-      }
     }
   }
 
   async function bootstrapAuth() {
     try {
-      setAuthLoading(true)
-      setPerfilChecked(false)
+      setBootStatus('loading')
       setLoadingMsg('Carregando autenticação...')
 
       const sessao = await Promise.race([
@@ -108,24 +120,21 @@ export default function App() {
 
       if (!sessao?.user) {
         setUsuario(null)
-        setPerfilChecked(true)
+        setBootStatus('anonymous')
         return
       }
 
-      if (isRecoveryUrl() || passwordRecoveryMode) {
-        setPerfilChecked(true)
+      if (isRecoveryUrl()) {
+        setBootStatus('recovery')
         return
       }
 
-      await carregarPerfilUsuario({ silent: false })
+      await carregarPerfilPorUserId(sessao.user.id, { silent: false })
     } catch (err) {
       console.error('Erro ao carregar autenticação:', err)
       setSession(null)
       setUsuario(null)
-      setPerfilChecked(true)
-    } finally {
-      setAuthLoading(false)
-      setLoadingMsg('Carregando autenticação...')
+      setBootStatus('anonymous')
     }
   }
 
@@ -182,12 +191,11 @@ export default function App() {
         console.warn('Falha ao encerrar sessão remotamente:', err)
       }
 
+      profileRequestRef.current += 1
       setSession(null)
       setUsuario(null)
-      setPerfilChecked(true)
-      setAuthLoading(false)
+      setBootStatus('anonymous')
       setAba('publico')
-      setPasswordRecoveryMode(false)
 
       window.location.replace(window.location.pathname)
     } catch (err) {
@@ -210,33 +218,33 @@ export default function App() {
     } = onAuthStateChange(async (event, sessao) => {
       console.log('Auth state mudou:', event, sessao)
 
+      // evita reprocessar o bootstrap já tratado por getSession()
+      if (event === 'INITIAL_SESSION') {
+        return
+      }
+
       setSession(sessao)
 
       if (event === 'PASSWORD_RECOVERY') {
-        setPasswordRecoveryMode(true)
-        setPerfilChecked(true)
-        setAuthLoading(false)
+        setBootStatus('recovery')
         return
       }
 
       if (!sessao?.user) {
+        profileRequestRef.current += 1
         setUsuario(null)
-        setPerfilChecked(true)
+        setBootStatus('anonymous')
         setAba('publico')
-        setPasswordRecoveryMode(false)
         return
       }
 
       if (isRecoveryUrl()) {
-        setPerfilChecked(true)
-        setAuthLoading(false)
+        setBootStatus('recovery')
         return
       }
 
-      // revalidação normal de sessão / retorno da aba:
-      // sempre silencioso para não derrubar a UI
-      await carregarPerfilUsuario({ silent: true })
-      setPerfilChecked(true)
+      // refresh silencioso
+      await carregarPerfilPorUserId(sessao.user.id, { silent: true })
     })
 
     return () => {
@@ -288,10 +296,6 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (isAdmin && aba !== 'publico' && aba !== 'aluno' && aba !== 'admin') {
-      setAba('publico')
-    }
-
     if (!isAdmin && aba === 'admin') {
       setAba('publico')
     }
@@ -302,21 +306,21 @@ export default function App() {
       await signOut()
       limparChamadoLocal()
       limparStoragesDoSupabase()
+      profileRequestRef.current += 1
       setSession(null)
       setUsuario(null)
-      setPerfilChecked(true)
+      setBootStatus('anonymous')
       setAba('publico')
-      setPasswordRecoveryMode(false)
     } catch (err) {
       console.error('Erro ao sair:', err)
     }
   }
 
-  if (authLoading) {
+  if (bootStatus === 'loading') {
     return (
       <div className="app-shell">
         <div className="card">
-          <h2>Autenticação</h2>
+          <h2>Perfil</h2>
           <p>{loadingMsg}</p>
 
           <div className="toolbar" style={{ marginTop: '1rem' }}>
@@ -334,7 +338,7 @@ export default function App() {
     )
   }
 
-  if (passwordRecoveryMode) {
+  if (bootStatus === 'recovery') {
     return (
       <div className="app-shell">
         <header className="topbar">
@@ -348,7 +352,6 @@ export default function App() {
           <AuthForm
             initialMode="redefinir"
             onPasswordResetComplete={async () => {
-              setPasswordRecoveryMode(false)
               window.history.replaceState({}, document.title, window.location.pathname)
               await handleLogout()
             }}
@@ -358,7 +361,7 @@ export default function App() {
     )
   }
 
-  if (!session) {
+  if (bootStatus === 'anonymous') {
     return (
       <div className="app-shell">
         <header className="topbar">
@@ -375,29 +378,7 @@ export default function App() {
     )
   }
 
-  if (!perfilChecked) {
-    return (
-      <div className="app-shell">
-        <div className="card">
-          <h2>Perfil</h2>
-          <p>Carregando perfil do usuário...</p>
-
-          <div className="toolbar" style={{ marginTop: '1rem' }}>
-            <button
-              type="button"
-              className="secondary"
-              onClick={handleResetSessao}
-              disabled={resettingSession}
-            >
-              {resettingSession ? 'Limpando sessão...' : 'Cancelar e voltar ao login'}
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (session && !usuario) {
+  if (bootStatus === 'needs_profile' && session) {
     return (
       <div className="app-shell">
         <header className="topbar">
@@ -417,7 +398,9 @@ export default function App() {
           <CadastroPerfil
             sessaoAtiva={sessaoAtiva}
             onDone={async () => {
-              await carregarPerfilUsuario({ silent: false })
+              if (session?.user?.id) {
+                await carregarPerfilPorUserId(session.user.id, { silent: false })
+              }
             }}
           />
         </main>
