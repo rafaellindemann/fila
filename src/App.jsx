@@ -1,4 +1,4 @@
-// bash
+// bash2
 import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
@@ -10,7 +10,7 @@ import CadastroPerfil from './pages/CadastroPerfil'
 
 import { listarFilaAtiva, limparChamadoLocal } from './services/chamados'
 import { listarSessoesAtivas } from './services/sessoes'
-import { buscarUsuarioPorId } from './services/usuarios'
+import { buscarMeuUsuario } from './services/usuarios'
 import { getSession, onAuthStateChange, signOut } from './services/auth'
 import { supabase } from './lib/supabase'
 
@@ -72,22 +72,15 @@ export default function App() {
     }
   }
 
-  async function carregarPerfilPorSessao(sessao, { silent = false } = {}) {
+  async function carregarPerfilUsuario({ silent = false } = {}) {
     try {
       if (!silent) {
         setPerfilChecked(false)
         setLoadingMsg('Carregando perfil do usuário...')
       }
 
-      const userId = sessao?.user?.id
-      if (!userId) {
-        setUsuario(null)
-        return null
-      }
-
-      const meuUsuario = await buscarUsuarioPorId(userId)
+      const meuUsuario = await buscarMeuUsuario()
       setUsuario(meuUsuario || null)
-
       return meuUsuario || null
     } catch (err) {
       console.error('Erro ao buscar perfil do usuário:', err)
@@ -124,7 +117,7 @@ export default function App() {
         return
       }
 
-      await carregarPerfilPorSessao(sessao, { silent: false })
+      await carregarPerfilUsuario({ silent: false })
     } catch (err) {
       console.error('Erro ao carregar autenticação:', err)
       setSession(null)
@@ -240,9 +233,9 @@ export default function App() {
         return
       }
 
-      // Revalidação de sessão / volta da aba:
-      // sempre silencioso para não derrubar a UI.
-      await carregarPerfilPorSessao(sessao, { silent: true })
+      // revalidação normal de sessão / retorno da aba:
+      // sempre silencioso para não derrubar a UI
+      await carregarPerfilUsuario({ silent: true })
       setPerfilChecked(true)
     })
 
@@ -424,7 +417,7 @@ export default function App() {
           <CadastroPerfil
             sessaoAtiva={sessaoAtiva}
             onDone={async () => {
-              await carregarPerfilPorSessao(session, { silent: false })
+              await carregarPerfilUsuario({ silent: false })
             }}
           />
         </main>

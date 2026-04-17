@@ -1,149 +1,149 @@
-import { useEffect, useMemo, useState } from "react";
-import { listarTurmasAtivas } from "../services/turmas";
-import { criarSessao, encerrarSessao } from "../services/sessoes";
+import { useEffect, useMemo, useState } from 'react'
+import { listarTurmasAtivas } from '../services/turmas'
+import { criarSessao, encerrarSessao } from '../services/sessoes'
 import {
   iniciarAtendimento,
   finalizarChamado,
   cancelarChamadoAdmin,
   chamarAgora,
-} from "../services/chamados";
-import { registrarInteracao } from "../services/interacoes";
-import TimerCard from "./TimerCard";
+} from '../services/chamados'
+import { registrarInteracao } from '../services/interacoes'
+import TimerCard from './TimerCard'
 
-const STORAGE_KEY = "fila_tempo_atendimento_segundos";
-const DEFAULT_DURATION_SECONDS = 120;
+const STORAGE_KEY = 'fila_tempo_atendimento_segundos'
+const DEFAULT_DURATION_SECONDS = 120
 
 function getStoredDurationSeconds() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  const parsed = Number(raw);
+  const raw = localStorage.getItem(STORAGE_KEY)
+  const parsed = Number(raw)
 
   if (!raw || Number.isNaN(parsed) || parsed <= 0) {
-    return DEFAULT_DURATION_SECONDS;
+    return DEFAULT_DURATION_SECONDS
   }
 
-  return parsed;
+  return parsed
 }
 
 export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
-  const [turmas, setTurmas] = useState([]);
-  const [turmaId, setTurmaId] = useState("");
-  const [titulo, setTitulo] = useState("");
+  const [turmas, setTurmas] = useState([])
+  const [turmaId, setTurmaId] = useState('')
+  const [titulo, setTitulo] = useState('')
 
   const [tempoConfigMinutos, setTempoConfigMinutos] = useState(() =>
-    String(Math.round(getStoredDurationSeconds() / 60)),
-  );
+    String(Math.round(getStoredDurationSeconds() / 60))
+  )
   const [tempoAtendimentoSegundos, setTempoAtendimentoSegundos] = useState(() =>
-    getStoredDurationSeconds(),
-  );
+    getStoredDurationSeconds()
+  )
 
   useEffect(() => {
-    carregarTurmas();
-  }, []);
+    carregarTurmas()
+  }, [])
 
   async function carregarTurmas() {
-    const data = await listarTurmasAtivas();
-    setTurmas(data);
+    const data = await listarTurmasAtivas()
+    setTurmas(data)
   }
 
   const emAtendimento = useMemo(
-    () => fila.find((item) => item.status === "em_atendimento"),
-    [fila],
-  );
+    () => fila.find((item) => item.status === 'em_atendimento'),
+    [fila]
+  )
 
   const aguardando = useMemo(
-    () => fila.filter((item) => item.status === "aguardando"),
-    [fila],
-  );
+    () => fila.filter((item) => item.status === 'aguardando'),
+    [fila]
+  )
 
-  const proximo = aguardando[0];
+  const proximo = aguardando[0]
 
   async function abrirSessao(e) {
-    e.preventDefault();
+    e.preventDefault()
     await criarSessao({
       turma_id: Number(turmaId),
       titulo,
-    });
-    setTurmaId("");
-    setTitulo("");
-    onRefresh();
+    })
+    setTurmaId('')
+    setTitulo('')
+    onRefresh()
   }
 
   async function fecharSessao() {
-    if (!sessaoAtiva) return;
-    await encerrarSessao(sessaoAtiva.id);
-    onRefresh();
+    if (!sessaoAtiva) return
+    await encerrarSessao(sessaoAtiva.id)
+    onRefresh()
   }
 
   async function chamarProximo() {
-    if (!proximo) return;
-    await iniciarAtendimento(proximo.chamado_id);
-    onRefresh();
+    if (!proximo) return
+    await iniciarAtendimento(proximo.chamado_id)
+    onRefresh()
   }
 
   async function concluirProfessor() {
-    if (!emAtendimento) return;
+    if (!emAtendimento) return
 
-    await finalizarChamado(emAtendimento.chamado_id);
+    await finalizarChamado(emAtendimento.chamado_id)
     await registrarInteracao({
       chamado_id: emAtendimento.chamado_id,
-      tipo_resultado: "atendido_professor",
-    });
-    onRefresh();
+      tipo_resultado: 'atendido_professor',
+    })
+    onRefresh()
   }
 
   async function marcarVacuoEmAtendimento() {
-    if (!emAtendimento) return;
+    if (!emAtendimento) return
 
-    await finalizarChamado(emAtendimento.chamado_id);
+    await finalizarChamado(emAtendimento.chamado_id)
     await registrarInteracao({
       chamado_id: emAtendimento.chamado_id,
-      tipo_resultado: "ficou_no_vacuo",
-    });
-    onRefresh();
+      tipo_resultado: 'ficou_no_vacuo',
+    })
+    onRefresh()
   }
 
   async function cancelar(chamadoId) {
-    await cancelarChamadoAdmin(chamadoId);
+    await cancelarChamadoAdmin(chamadoId)
     await registrarInteracao({
       chamado_id: chamadoId,
-      tipo_resultado: "cancelado_pelo_aluno",
-    });
-    onRefresh();
+      tipo_resultado: 'cancelado_pelo_aluno',
+    })
+    onRefresh()
   }
 
   async function marcarVacuoNaFila(chamadoId) {
-    await cancelarChamadoAdmin(chamadoId);
+    await cancelarChamadoAdmin(chamadoId)
     await registrarInteracao({
       chamado_id: chamadoId,
-      tipo_resultado: "ficou_no_vacuo",
-    });
-    onRefresh();
+      tipo_resultado: 'ficou_no_vacuo',
+    })
+    onRefresh()
   }
 
   async function handleChamarAgora(chamado) {
     try {
-      if (!confirm("Chamar este aluno agora e ignorar a ordem da fila?")) {
-        return;
+      if (!confirm('Chamar este aluno agora e ignorar a ordem da fila?')) {
+        return
       }
 
-      await chamarAgora(chamado.chamado_id, sessaoAtiva.id);
-      await onRefresh();
+      await chamarAgora(chamado.chamado_id, sessaoAtiva.id)
+      onRefresh()
     } catch (err) {
-      console.error("Erro ao chamar agora:", err);
-      alert("Erro ao chamar aluno.");
+      console.error('Erro ao chamar agora:', err)
+      alert('Erro ao chamar aluno.')
     }
   }
 
   function salvarTempoAtendimento() {
-    const minutos = Number(tempoConfigMinutos);
+    const minutos = Number(tempoConfigMinutos)
 
     if (Number.isNaN(minutos) || minutos <= 0) {
-      return;
+      return
     }
 
-    const segundos = Math.round(minutos * 60);
-    localStorage.setItem(STORAGE_KEY, String(segundos));
-    setTempoAtendimentoSegundos(segundos);
+    const segundos = Math.round(minutos * 60)
+    localStorage.setItem(STORAGE_KEY, String(segundos))
+    setTempoAtendimentoSegundos(segundos)
   }
 
   if (!sessaoAtiva) {
@@ -181,7 +181,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
           </form>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -189,7 +189,9 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
       <div className="card session-banner">
         <div>
           <h2>{sessaoAtiva.turma?.apelido || sessaoAtiva.turma?.nome}</h2>
-          <p className="muted">{sessaoAtiva.titulo || "Sessão em andamento"}</p>
+          <p className="muted">
+            {sessaoAtiva.titulo || 'Sessão em andamento'}
+          </p>
         </div>
 
         <button className="danger" onClick={fecharSessao}>
@@ -200,9 +202,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
       <div className="card atendimento-settings-card">
         <div className="section-header">
           <h2>Tempo padrão de atendimento</h2>
-          <span className="badge">
-            {Math.round(tempoAtendimentoSegundos / 60)} min
-          </span>
+          <span className="badge">{Math.round(tempoAtendimentoSegundos / 60)} min</span>
         </div>
 
         <div className="tempo-config-row">
@@ -242,7 +242,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
               </div>
 
               <p className="atendimento-problema destaque-pergunta">
-                {emAtendimento.descricao_problema || "🔇"}
+                {emAtendimento.descricao_problema || '🔇'}
               </p>
 
               <div className="admin-actions">
@@ -250,10 +250,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
                   Finalizar
                 </button>
 
-                <button
-                  className="secondary"
-                  onClick={marcarVacuoEmAtendimento}
-                >
+                <button className="secondary" onClick={marcarVacuoEmAtendimento}>
                   Ficou no vácuo
                 </button>
               </div>
@@ -288,7 +285,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
                   <div className="queue-main">
                     <strong>{item.nome_completo}</strong>
                     <p className="queue-problema-small destaque-pergunta">
-                      {item.descricao_problema || "🔇"}
+                      {item.descricao_problema || '🔇'}
                     </p>
                   </div>
 
@@ -308,7 +305,7 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
                         Cancelar
                       </button>
 
-                      {item.status === "aguardando" && (
+                      {item.status === 'aguardando' && (
                         <button
                           className="ghost"
                           onClick={() => handleChamarAgora(item)}
@@ -334,5 +331,5 @@ export default function AdminPanel({ fila, sessaoAtiva, onRefresh }) {
         </div>
       </div>
     </div>
-  );
+  )
 }
