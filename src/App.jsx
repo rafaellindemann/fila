@@ -7,7 +7,7 @@ import StudentForm from "./components/StudentForm";
 import AdminPanel from "./components/AdminPanel";
 import AuthForm from "./components/AuthForm";
 import CadastroPerfil from "./pages/CadastroPerfil";
-
+import AdminDashboard from "./components/AdminDashboard";
 import { listarFilaAtiva, limparChamadoLocal } from "./services/chamados";
 import { listarSessoesAtivas } from "./services/sessoes";
 import { buscarUsuarioPorId } from "./services/usuarios";
@@ -462,12 +462,20 @@ export default function App() {
           </button>
 
           {isAdmin && (
-            <button
-              className={aba === "admin" ? "active" : ""}
-              onClick={() => setAba("admin")}
-            >
-              Admin
-            </button>
+            <>
+              <button
+                className={aba === "admin" ? "active" : ""}
+                onClick={() => setAba("admin")}
+              >
+                Admin
+              </button>
+              <button
+                className={aba === "dashboard" ? "active" : ""}
+                onClick={() => setAba("dashboard")}
+              >
+                Dashboard
+              </button>
+            </>
           )}
 
           <button className="secondary" onClick={handleLogout}>
@@ -497,6 +505,7 @@ export default function App() {
                 usuario={usuario}
               />
             )}
+            {aba === 'dashboard' && isAdmin && <AdminDashboard />}
           </>
         )}
       </main>
