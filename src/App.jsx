@@ -491,7 +491,7 @@ export default function App() {
           </div>
         ) : (
           <>
-            {aba === "publico" && <QueueBoard fila={fila} />}
+            {aba === "publico" && <QueueBoard fila={fila} usuario={usuario} />}
 
             {aba === "aluno" && (
               <StudentForm onRefresh={carregarTudo} usuario={usuario} />

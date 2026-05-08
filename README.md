@@ -1,3 +1,8 @@
+## Coisas pra prestar mais atencçao na branch ajudador em localhost:
+- recuperar senha tá entrando direto ao clicar no botão do e-mail
+- só o primeiro 'ajudei' apareceu
+- o tempo real morreu
+
 
 - >>> antes do deploy, testar se o bug de perder login ao sair da aba não voltou <<<
 
@@ -37,4 +42,9 @@ mais raros:
 #7D91EC
 #00EEEB 
 */
+
+
+
+
+
 

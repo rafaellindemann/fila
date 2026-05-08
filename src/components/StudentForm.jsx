@@ -10,6 +10,11 @@ import {
   registrarResolvidoSozinho,
 } from '../services/interacoes'
 import { listarUsuariosDaTurma } from '../services/usuarios'
+import {
+  listarSolicitacoesPendentesDoChamado,
+  aceitarSolicitacaoAjuda,
+  recusarSolicitacaoAjuda,
+} from '../services/solicitacoesAjuda'
 
 const MAX_DESCRICAO = 300
 
@@ -17,6 +22,7 @@ export default function StudentForm({ onRefresh, usuario }) {
   const [sessoes, setSessoes] = useState([])
   const [meuChamado, setMeuChamado] = useState(null)
   const [colegas, setColegas] = useState([])
+  const [solicitacoesAjuda, setSolicitacoesAjuda] = useState([])
 
   const [descricao, setDescricao] = useState('')
   const [colegaId, setColegaId] = useState('')
@@ -25,10 +31,27 @@ export default function StudentForm({ onRefresh, usuario }) {
   const [erro, setErro] = useState('')
   const [loading, setLoading] = useState(false)
   const [carregando, setCarregando] = useState(true)
+  const [respondendoSolicitacao, setRespondendoSolicitacao] = useState(false)
 
   useEffect(() => {
     carregar()
   }, [usuario?.id])
+
+  useEffect(() => {
+    const chamadoId = meuChamado?.id
+    if (!chamadoId) {
+      setSolicitacoesAjuda([])
+      return
+    }
+
+    carregarSolicitacoesAjuda(chamadoId)
+
+    const intervalId = setInterval(() => {
+      carregarSolicitacoesAjuda(chamadoId)
+    }, 4000)
+
+    return () => clearInterval(intervalId)
+  }, [meuChamado?.id])
 
   async function carregar() {
     try {
@@ -43,6 +66,12 @@ export default function StudentForm({ onRefresh, usuario }) {
       setSessoes(listaSessoes || [])
       setMeuChamado(chamado || null)
 
+      if (chamado?.id) {
+        await carregarSolicitacoesAjuda(chamado.id)
+      } else {
+        setSolicitacoesAjuda([])
+      }
+
       if (usuario?.turma?.id) {
         const lista = await listarUsuariosDaTurma(usuario.turma.id)
         setColegas(lista || [])
@@ -56,7 +85,17 @@ export default function StudentForm({ onRefresh, usuario }) {
     }
   }
 
+  async function carregarSolicitacoesAjuda(chamadoId) {
+    try {
+      const data = await listarSolicitacoesPendentesDoChamado(chamadoId)
+      setSolicitacoesAjuda(data || [])
+    } catch (err) {
+      console.error('Erro ao carregar solicitações de ajuda:', err)
+    }
+  }
+
   const sessaoAtiva = sessoes[0] || null
+  const solicitacaoPendente = solicitacoesAjuda[0] || null
 
   const colegasPossiveis = useMemo(() => {
     return colegas.filter((c) => c.id !== usuario?.id)
@@ -75,17 +114,9 @@ export default function StudentForm({ onRefresh, usuario }) {
     setLoading(true)
 
     try {
-      if (meuChamado) {
-        throw new Error('Você já possui um chamado ativo.')
-      }
-
-      if (!sessaoAtiva) {
-        throw new Error('Não há sessão ativa no momento.')
-      }
-
-      if (!podeAbrirChamado) {
-        throw new Error('Você só pode abrir chamado na sessão da sua turma.')
-      }
+      if (meuChamado) throw new Error('Você já possui um chamado ativo.')
+      if (!sessaoAtiva) throw new Error('Não há sessão ativa no momento.')
+      if (!podeAbrirChamado) throw new Error('Você só pode abrir chamado na sessão da sua turma.')
 
       const chamado = await entrarNaFila({
         sessao_id: sessaoAtiva.id,
@@ -114,6 +145,7 @@ export default function StudentForm({ onRefresh, usuario }) {
     try {
       await cancelarMeuChamado()
       setMeuChamado(null)
+      setSolicitacoesAjuda([])
       setMsg('Chamado cancelado.')
 
       await carregar()
@@ -133,6 +165,7 @@ export default function StudentForm({ onRefresh, usuario }) {
     try {
       await registrarResolvidoSozinho()
       setMeuChamado(null)
+      setSolicitacoesAjuda([])
       setMsg('Marcado como resolvido.')
 
       await carregar()
@@ -150,10 +183,7 @@ export default function StudentForm({ onRefresh, usuario }) {
     setLoading(true)
 
     try {
-      if (!colegaId) {
-        throw new Error('Selecione o colega que ajudou.')
-      }
-
+      if (!colegaId) throw new Error('Selecione o colega que ajudou.')
       if (String(colegaId) === String(usuario.id)) {
         throw new Error('Você não pode selecionar a si mesmo.')
       }
@@ -163,6 +193,7 @@ export default function StudentForm({ onRefresh, usuario }) {
       })
 
       setMeuChamado(null)
+      setSolicitacoesAjuda([])
       setColegaId('')
       setMsg('Ajuda registrada com sucesso.')
 
@@ -175,8 +206,90 @@ export default function StudentForm({ onRefresh, usuario }) {
     }
   }
 
+  async function handleAceitarSolicitacao() {
+    if (!solicitacaoPendente) return
+
+    setErro('')
+    setMsg('')
+    setRespondendoSolicitacao(true)
+
+    try {
+      await aceitarSolicitacaoAjuda(solicitacaoPendente)
+
+      setMeuChamado(null)
+      setSolicitacoesAjuda([])
+      setMsg('Ajuda confirmada e chamado finalizado.')
+
+      await carregar()
+      onRefresh?.()
+    } catch (err) {
+      setErro(err.message || 'Erro ao confirmar ajuda.')
+    } finally {
+      setRespondendoSolicitacao(false)
+    }
+  }
+
+  async function handleRecusarSolicitacao() {
+    if (!solicitacaoPendente) return
+
+    setErro('')
+    setMsg('')
+    setRespondendoSolicitacao(true)
+
+    try {
+      await recusarSolicitacaoAjuda(solicitacaoPendente.id)
+      setSolicitacoesAjuda((prev) =>
+        prev.filter((s) => s.id !== solicitacaoPendente.id)
+      )
+      setMsg('Pedido de ajuda recusado.')
+      onRefresh?.()
+    } catch (err) {
+      setErro(err.message || 'Erro ao recusar ajuda.')
+    } finally {
+      setRespondendoSolicitacao(false)
+    }
+  }
+
   return (
     <div className="student-stack">
+      {solicitacaoPendente && (
+        <div className="modal-backdrop">
+          <div className="card modal">
+            <h2>Confirmar ajuda?</h2>
+
+            <p>
+              <strong>{solicitacaoPendente.ajudador?.nome_completo || 'Um colega'}</strong>{' '}
+              informou que ajudou você neste chamado.
+            </p>
+
+            <div className="destaque-pergunta">
+              {meuChamado?.descricao_problema || '🔇'}
+            </div>
+
+            {erro && <p className="error">{erro}</p>}
+
+            <div className="inline-actions">
+              <button
+                type="button"
+                onClick={handleAceitarSolicitacao}
+                disabled={respondendoSolicitacao}
+              >
+                {respondendoSolicitacao ? 'Confirmando...' : 'Confirmar ajuda'}
+              </button>
+
+              <button
+                type="button"
+                className="secondary"
+                onClick={handleRecusarSolicitacao}
+                disabled={respondendoSolicitacao}
+              >
+                Recusar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="card student-hero-card">
         <div className="student-hero-top">
           <div>
@@ -237,7 +350,7 @@ export default function StudentForm({ onRefresh, usuario }) {
             </div>
 
             {msg && <p className="success">{msg}</p>}
-            {erro && <p className="error">{erro}</p>}
+            {erro && !solicitacaoPendente && <p className="error">{erro}</p>}
 
             <button
               type="submit"
