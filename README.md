@@ -1,3 +1,7 @@
+- recuperar senha tá entrando direto ao clicar no botão do e-mail
+- só o primeiro 'ajudei' apareceu
+- o tempo real morreu
+- quando desloga com chamado aberto, o chamado fica órfão. Ainda existe mas não aparece pro aluno. Ao tentar criar um chamado novo o banco não aceita porque já tem um.
 
 - >>> antes do deploy, testar se o bug de perder login ao sair da aba não voltou <<<
 
@@ -37,4 +41,8 @@ mais raros:
 #7D91EC
 #00EEEB 
 */
+
+
+
+
 
