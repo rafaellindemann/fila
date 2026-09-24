@@ -1,12 +1,12 @@
-
-import './App.css'
+import { supabase } from './lib/supabase'
 
 function App() {
 
+
   return (
-   <>
-    <h1>Fila v2</h1>
-   </>
+    <main>
+      <h1>Fila V2</h1>
+    </main>
   )
 }
 
